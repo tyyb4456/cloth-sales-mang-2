@@ -16,7 +16,13 @@ import {
   HandCoins,
   LogOut,
   User,
-  Building2
+  Building2,
+  Package,
+  TruckIcon,
+  RotateCcw,
+  ShoppingCart,
+  FileText,
+  BarChart3
 } from 'lucide-react';
 
 import { useAuth } from '../App';
@@ -37,20 +43,77 @@ export default function Sidebar() {
 
   const menuItems = [
     { path: '/Dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/ProductDemandPredictor', icon: LineChart, label: 'Product Demand Predictor' },
-    { path: '/PredictionsDashboard', icon: LineChart, label: 'Predictions Dashboard' },
-    { path: '/AIChatbot', icon: MessageSquareText, label: 'AI Chatbot' },
-    { path: '/ExpenseTracker', icon: Wallet, label: 'Expense Tracker' },
-    { path: '/FinancialDashboard', icon: DollarSign, label: 'Financial Dashboard' },
-    { path: '/VoiceSalesComponent', icon: Mic, label: 'Voice Sales' },
-    { path: '/InventoryDashboard', icon: Boxes, label: 'Inventory Dashboard' },
-    { path: '/CustomerLoanDashboard', icon: HandCoins, label: 'Customer Loans' },
-    { path: '/shopkeeper-stock', icon: Users, label: 'Shopkeeper Stock' },
+    { 
+      section: 'Core Operations',
+      items: [
+        { path: '/varieties', icon: Package, label: 'Cloth Varieties' },
+        { path: '/supplier-inventory', icon: TruckIcon, label: 'Supplier Inventory' },
+        { path: '/supplier-returns', icon: RotateCcw, label: 'Supplier Returns' },
+        { path: '/sales', icon: ShoppingCart, label: 'Sales' },
+    
+      ]
+    },
+    {
+      section: 'Analytics & Reports',
+      items: [
+        { path: '/reports', icon: FileText, label: 'Reports' },
+        { path: '/analytics', icon: BarChart3, label: 'Analytics Dashboard' },
+        { path: '/ProductDemandPredictor', icon: LineChart, label: 'Demand Predictor' },
+        { path: '/PredictionsDashboard', icon: LineChart, label: 'Predictions Dashboard' },
+      ]
+    },
+    {
+      section: 'AI & Advanced',
+      items: [
+        { path: '/AIChatbot', icon: MessageSquareText, label: 'AI Chatbot' },
+        { path: '/VoiceSalesComponent', icon: Mic, label: 'Voice Sales' },
+      ]
+    },
+    {
+      section: 'Financial',
+      items: [
+        { path: '/ExpenseTracker', icon: Wallet, label: 'Expense Tracker' },
+        { path: '/FinancialDashboard', icon: DollarSign, label: 'Financial Dashboard' },
+        { path: '/CustomerLoanDashboard', icon: HandCoins, label: 'Customer Loans' },
+      ]
+    },
+    {
+      section: 'Inventory & Stock',
+      items: [
+        { path: '/InventoryDashboard', icon: Boxes, label: 'Inventory Dashboard' },
+        { path: '/shopkeeper-stock', icon: Users, label: 'Shopkeeper Stock' },
+      ]
+    }
   ];
 
   const handleNavigate = (path) => {
     navigate(path);
     setMobileMenuOpen(false);
+  };
+
+  const renderMenuItem = (item) => {
+    const Icon = item.icon;
+    const isActive = location.pathname === item.path;
+    
+    return (
+      <button
+        key={item.path}
+        onClick={() => handleNavigate(item.path)}
+        className={`w-full flex items-center gap-3 px-4 py-3 transition-all ${
+          isActive
+            ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border-r-4 border-gray-700 dark:border-gray-400'
+            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+        }`}
+      >
+        <Icon size={20} className="shrink-0" />
+        {sidebarOpen && (
+          <span className="font-medium text-sm">{item.label}</span>
+        )}
+        {isActive && sidebarOpen && (
+          <ChevronRight size={16} className="ml-auto" />
+        )}
+      </button>
+    );
   };
 
   return (
@@ -74,29 +137,21 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            
-            return (
-              <button
-                key={item.path}
-                onClick={() => handleNavigate(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 transition-all ${
-                  isActive
-                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border-r-4 border-gray-700 dark:border-gray-400'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                <Icon size={20} className="shrink-0" />
-                {sidebarOpen && (
-                  <span className="font-medium text-sm">{item.label}</span>
-                )}
-                {isActive && sidebarOpen && (
-                  <ChevronRight size={16} className="ml-auto" />
-                )}
-              </button>
-            );
+          {menuItems.map((item, index) => {
+            if (item.section) {
+              return (
+                <div key={index} className="mb-4">
+                  {sidebarOpen && (
+                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {item.section}
+                    </div>
+                  )}
+                  {item.items.map(subItem => renderMenuItem(subItem))}
+                </div>
+              );
+            } else {
+              return renderMenuItem(item);
+            }
           })}
         </nav>
 
@@ -174,24 +229,19 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            
-            return (
-              <button
-                key={item.path}
-                onClick={() => handleNavigate(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 transition-all ${
-                  isActive
-                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border-r-4 border-gray-700 dark:border-gray-400'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <Icon size={20} />
-                <span className="font-medium text-sm">{item.label}</span>
-              </button>
-            );
+          {menuItems.map((item, index) => {
+            if (item.section) {
+              return (
+                <div key={index} className="mb-4">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {item.section}
+                  </div>
+                  {item.items.map(subItem => renderMenuItem(subItem))}
+                </div>
+              );
+            } else {
+              return renderMenuItem(item);
+            }
           })}
         </nav>
 
