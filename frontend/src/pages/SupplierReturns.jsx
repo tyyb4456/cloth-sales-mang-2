@@ -1,12 +1,13 @@
+// frontend/src/pages/SupplierReturns.jsx - FIXED WITH AUTHENTICATION
+
 import { useState, useEffect } from 'react';
 import { Plus, Calendar, Trash2, TrendingDown, RotateCcw, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 const formatDate = (date) => {
   const d = new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
 
 export default function MonthlySupplierReturns() {
   const [varieties, setVarieties] = useState([]);
@@ -14,7 +15,6 @@ export default function MonthlySupplierReturns() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   
-  // Month/Year selection
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   
@@ -47,9 +47,9 @@ export default function MonthlySupplierReturns() {
 
   const loadVarieties = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/varieties/`);
-      const data = await response.json();
-      setVarieties(Array.isArray(data) ? data : []);
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get('/varieties/');
+      setVarieties(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading varieties:', error);
     }
@@ -57,9 +57,9 @@ export default function MonthlySupplierReturns() {
 
   const loadSupplierInventories = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/supplier/inventory`);
-      const data = await response.json();
-      setSupplierInventories(Array.isArray(data) ? data : []);
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get('/supplier/inventory');
+      setSupplierInventories(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading supplier inventories:', error);
     }
@@ -68,9 +68,9 @@ export default function MonthlySupplierReturns() {
   const loadMonthlyReturns = async () => {
     setLoading(true);
     try {
-      // Get all returns and filter by month
-      const response = await fetch(`${API_BASE_URL}/supplier/returns`);
-      const data = await response.json();
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get('/supplier/returns');
+      const data = response.data;
       
       const filtered = (Array.isArray(data) ? data : []).filter(item => {
         const itemDate = new Date(item.return_date);
@@ -91,7 +91,6 @@ export default function MonthlySupplierReturns() {
     setSelectedVariety(variety);
     setShowVarietyDropdown(false);
     
-    // Auto-fill price if supplier and variety selected
     if (formData.supplier_name) {
       fetchSupplierPrice(formData.supplier_name, variety.id);
     }
@@ -100,14 +99,12 @@ export default function MonthlySupplierReturns() {
   const handleSupplierChange = (supplierName) => {
     setFormData({ ...formData, supplier_name: supplierName });
     
-    // Auto-fill price if variety already selected
     if (selectedVariety) {
       fetchSupplierPrice(supplierName, selectedVariety.id);
     }
   };
 
   const fetchSupplierPrice = (supplierName, varietyId) => {
-    // Find matching supplier inventory with remaining stock
     const matchingInventories = supplierInventories.filter(inv => 
       inv.supplier_name.toLowerCase() === supplierName.toLowerCase() &&
       inv.variety_id === varietyId &&
@@ -150,21 +147,13 @@ export default function MonthlySupplierReturns() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/supplier/returns`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          variety_id: parseInt(formData.variety_id),
-          quantity: parseFloat(formData.quantity),
-          price_per_item: parseFloat(formData.price_per_item)
-        })
+      // ✅ FIXED: Using authenticated API
+      await api.post('/supplier/returns', {
+        ...formData,
+        variety_id: parseInt(formData.variety_id),
+        quantity: parseFloat(formData.quantity),
+        price_per_item: parseFloat(formData.price_per_item)
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to record return');
-      }
 
       alert('Return recorded successfully! Stock deducted.');
       setFormData({
@@ -180,7 +169,8 @@ export default function MonthlySupplierReturns() {
       setShowForm(false);
       loadMonthlyReturns();
     } catch (error) {
-      alert(error.message);
+      console.error('Failed to record return:', error);
+      alert(error.response?.data?.detail || 'Failed to record return');
     }
   };
 
@@ -188,10 +178,12 @@ export default function MonthlySupplierReturns() {
     if (!confirm('Delete this return record? This will restore stock levels.')) return;
     
     try {
-      await fetch(`${API_BASE_URL}/supplier/returns/${id}`, { method: 'DELETE' });
+      // ✅ FIXED: Using authenticated API
+      await api.delete(`/supplier/returns/${id}`);
       loadMonthlyReturns();
       alert('Return deleted! Stock restored.');
     } catch (error) {
+      console.error('Failed to delete return:', error);
       alert('Failed to delete return');
     }
   };
@@ -217,7 +209,6 @@ export default function MonthlySupplierReturns() {
     setCurrentYear(new Date().getFullYear());
   };
 
-  // Group by supplier
   const groupedBySupplier = returns.reduce((acc, item) => {
     if (!acc[item.supplier_name]) {
       acc[item.supplier_name] = [];
@@ -227,7 +218,6 @@ export default function MonthlySupplierReturns() {
   }, {});
 
   const totalAmount = returns.reduce((sum, item) => sum + parseFloat(item.total_amount), 0);
-  const totalQuantities = returns.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
 
   const filteredVarieties = varieties.filter(v =>
     v.name.toLowerCase().includes(varietySearch.toLowerCase())
@@ -240,7 +230,6 @@ export default function MonthlySupplierReturns() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-3xl font-bold text-gray-800">Supplier Returns</h2>
@@ -288,71 +277,53 @@ export default function MonthlySupplierReturns() {
           </div>
         </div>
 
-    {/* Summary Cards */}
-<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="bg-white rounded-xl p-6 border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-slate-500">Total Returns</p>
+                <h3 className="text-3xl font-semibold text-slate-800 mt-1">
+                  {returns.length}
+                </h3>
+              </div>
+              <div className="p-3 bg-slate-100 rounded-lg">
+                <RotateCcw className="w-6 h-6 text-slate-600" />
+              </div>
+            </div>
+            <p className="text-sm text-slate-500">returns this month</p>
+          </div>
 
-  {/* Total Returns */}
-  <div className="bg-white rounded-xl p-6 border border-slate-200">
-    <div className="flex items-center justify-between mb-3">
-      <div>
-        <p className="text-sm font-medium text-slate-500">
-          Total Returns
-        </p>
-        <h3 className="text-3xl font-semibold text-slate-800 mt-1">
-          {returns.length}
-        </h3>
-      </div>
-      <div className="p-3 bg-slate-100 rounded-lg">
-        <RotateCcw className="w-6 h-6 text-slate-600" />
-      </div>
-    </div>
-    <p className="text-sm text-slate-500">
-      returns this month
-    </p>
-  </div>
+          <div className="bg-white rounded-xl p-6 border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-slate-500">Return Value</p>
+                <h3 className="text-3xl font-semibold text-slate-800 mt-1">
+                  ₹{(totalAmount / 1000).toFixed(1)}K
+                </h3>
+              </div>
+              <div className="p-3 bg-slate-100 rounded-lg">
+                <TrendingDown className="w-6 h-6 text-slate-600" />
+              </div>
+            </div>
+            <p className="text-sm text-slate-500">refunded to suppliers</p>
+          </div>
 
-  {/* Return Value */}
-  <div className="bg-white rounded-xl p-6 border border-slate-200">
-    <div className="flex items-center justify-between mb-3">
-      <div>
-        <p className="text-sm font-medium text-slate-500">
-          Return Value
-        </p>
-        <h3 className="text-3xl font-semibold text-slate-800 mt-1">
-          ₹{(totalAmount / 1000).toFixed(1)}K
-        </h3>
-      </div>
-      <div className="p-3 bg-slate-100 rounded-lg">
-        <TrendingDown className="w-6 h-6 text-slate-600" />
-      </div>
-    </div>
-    <p className="text-sm text-slate-500">
-      refunded to suppliers
-    </p>
-  </div>
-
-  {/* Suppliers */}
-  <div className="bg-white rounded-xl p-6 border border-slate-200">
-    <div className="flex items-center justify-between mb-3">
-      <div>
-        <p className="text-sm font-medium text-slate-500">
-          Suppliers
-        </p>
-        <h3 className="text-3xl font-semibold text-slate-800 mt-1">
-          {Object.keys(groupedBySupplier).length}
-        </h3>
-      </div>
-      <div className="p-3 bg-slate-100 rounded-lg">
-        <AlertCircle className="w-6 h-6 text-slate-600" />
-      </div>
-    </div>
-    <p className="text-sm text-slate-500">
-      with returns
-    </p>
-  </div>
-
-</div>
-
+          <div className="bg-white rounded-xl p-6 border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-slate-500">Suppliers</p>
+                <h3 className="text-3xl font-semibold text-slate-800 mt-1">
+                  {Object.keys(groupedBySupplier).length}
+                </h3>
+              </div>
+              <div className="p-3 bg-slate-100 rounded-lg">
+                <AlertCircle className="w-6 h-6 text-slate-600" />
+              </div>
+            </div>
+            <p className="text-sm text-slate-500">with returns</p>
+          </div>
+        </div>
 
         {/* Return Form */}
         {showForm && (
@@ -361,7 +332,6 @@ export default function MonthlySupplierReturns() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               
-              {/* Supplier Name */}
               <div>
                 <label className="block mb-1 text-sm font-medium text-gray-700">Supplier Name *</label>
                 <input
@@ -373,7 +343,6 @@ export default function MonthlySupplierReturns() {
                 />
               </div>
 
-              {/* Cloth Variety */}
               <div className="relative">
                 <label className="block mb-1 text-sm font-medium text-gray-700">Cloth Variety *</label>
                 <input
@@ -408,7 +377,6 @@ export default function MonthlySupplierReturns() {
                 )}
               </div>
 
-              {/* Available Stock Alert */}
               {availableStock && formData.supplier_name && selectedVariety && (
                 <div className="md:col-span-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-start gap-3">
@@ -430,18 +398,15 @@ export default function MonthlySupplierReturns() {
                   <div className="flex items-start gap-3">
                     <AlertCircle size={20} className="text-yellow-600 mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-yellow-800">
-                        No inventory found
-                      </p>
+                      <p className="text-sm font-medium text-yellow-800">No inventory found</p>
                       <p className="text-xs text-yellow-600 mt-1">
-                        No remaining stock from "{formData.supplier_name}" for this variety. You may need to enter the price manually.
+                        No remaining stock from "{formData.supplier_name}" for this variety.
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Quantity */}
               <div>
                 <label className="block mb-1 text-sm font-medium text-gray-700">
                   Quantity {selectedVariety && `(${selectedVariety.measurement_unit})`} *
@@ -463,15 +428,9 @@ export default function MonthlySupplierReturns() {
                 )}
               </div>
 
-              {/* Price per Item */}
               <div>
                 <label className="block mb-1 text-sm font-medium text-gray-700">
                   Price per {selectedVariety ? selectedVariety.measurement_unit.slice(0, -1) : 'Unit'} (₹) *
-                  {availableStock && (
-                    <span className="ml-2 text-xs text-green-600 font-normal">
-                      (Auto-filled from inventory)
-                    </span>
-                  )}
                 </label>
                 <input
                   type="number"
@@ -484,7 +443,6 @@ export default function MonthlySupplierReturns() {
                 />
               </div>
 
-              {/* Return Date */}
               <div>
                 <label className="block mb-1 text-sm font-medium text-gray-700">Return Date *</label>
                 <input
@@ -495,19 +453,17 @@ export default function MonthlySupplierReturns() {
                 />
               </div>
 
-              {/* Reason */}
               <div>
                 <label className="block mb-1 text-sm font-medium text-gray-700">Reason for Return</label>
                 <input
                   type="text"
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  placeholder="e.g., Defective, Wrong item, Quality issue"
+                  placeholder="e.g., Defective, Wrong item"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
                 />
               </div>
 
-              {/* Total Amount Preview */}
               {formData.quantity && formData.price_per_item && (
                 <div className="md:col-span-2 p-4 bg-red-50 border border-red-200 rounded-lg">
                   <div className="flex justify-between items-center">
@@ -522,7 +478,6 @@ export default function MonthlySupplierReturns() {
                 </div>
               )}
 
-              {/* Actions */}
               <div className="md:col-span-2 flex gap-3 pt-2">
                 <button
                   onClick={handleSubmit}
@@ -545,7 +500,7 @@ export default function MonthlySupplierReturns() {
           </div>
         )}
 
-        {/* Returns List - Grouped by Supplier */}
+        {/* Returns List */}
         <div className="space-y-6">
           {loading ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -561,7 +516,6 @@ export default function MonthlySupplierReturns() {
           ) : (
             Object.entries(groupedBySupplier).map(([supplier, items]) => {
               const supplierTotal = items.reduce((sum, item) => sum + parseFloat(item.total_amount), 0);
-              const supplierQty = items.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
               
               return (
                 <div key={supplier} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

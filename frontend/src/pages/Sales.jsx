@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Plus, Calendar, Trash2, AlertTriangle, PackageCheck, DollarSign, TrendingUp, X, CheckCircle, User, Phone, CalendarDays, Package } from 'lucide-react';
+// frontend/src/pages/Sales.jsx - FIXED WITH AUTHENTICATION
 
+import { useState, useEffect } from 'react';
+import { Plus, Calendar, Trash2, Package, DollarSign, TrendingUp } from 'lucide-react';
 import SalesForm from '../components/SaleForm';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -13,8 +15,6 @@ const getItemCount = (quantity, unit) => {
   return parseFloat(quantity);
 };
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
-
 export default function EnhancedSalesWithPriceSelector() {
   const [varieties, setVarieties] = useState([]);
   const [sales, setSales] = useState([]);
@@ -22,50 +22,6 @@ export default function EnhancedSalesWithPriceSelector() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
-
-  const [formData, setFormData] = useState({
-    salesperson_name: '',
-    variety_id: '',
-    quantity: '',
-    selling_price: '',
-    cost_price: '',
-    sale_date: formatDate(new Date()),
-    stock_type: 'old_stock',
-    selected_inventory_id: null,
-    payment_status: 'paid',
-    customer_name: '',
-    customer_phone: '',
-    due_date: '',
-    loan_notes: ''
-  });
-
-  const [varietySearch, setVarietySearch] = useState('');
-  const [showVarietyDropdown, setShowVarietyDropdown] = useState(false);
-  const [selectedVariety, setSelectedVariety] = useState(null);
-  const [availablePriceOptions, setAvailablePriceOptions] = useState([]);
-  const [showPriceSelector, setShowPriceSelector] = useState(false);
-
-  const resetForm = () => {
-    setVarietySearch('');
-    setSelectedVariety(null);
-    setFormData({
-      salesperson_name: '',
-      variety_id: '',
-      quantity: '',
-      selling_price: '',
-      cost_price: '',
-      sale_date: formatDate(new Date()),
-      stock_type: 'old_stock',
-      payment_status: 'paid',
-      customer_name: '',
-      customer_phone: '',
-      due_date: '',
-      loan_notes: ''
-    });
-    setShowForm(false);
-    setAvailablePriceOptions([]);
-    setShowPriceSelector(false);
-  };
 
   useEffect(() => {
     loadVarieties();
@@ -78,9 +34,9 @@ export default function EnhancedSalesWithPriceSelector() {
 
   const loadVarieties = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/varieties/`);
-      const data = await response.json();
-      setVarieties(Array.isArray(data) ? data : []);
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get('/varieties/');
+      setVarieties(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading varieties:', error);
     }
@@ -95,9 +51,9 @@ export default function EnhancedSalesWithPriceSelector() {
 
   const loadSupplierInventories = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/supplier/inventory`);
-      const data = await response.json();
-      setSupplierInventories(Array.isArray(data) ? data : []);
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get('/supplier/inventory');
+      setSupplierInventories(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading supplier inventories:', error);
     }
@@ -106,9 +62,9 @@ export default function EnhancedSalesWithPriceSelector() {
   const loadSales = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/sales/date/${selectedDate}`);
-      const data = await response.json();
-      setSales(Array.isArray(data) ? data : []);
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get(`/sales/date/${selectedDate}`);
+      setSales(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading sales:', error);
     } finally {
@@ -116,23 +72,17 @@ export default function EnhancedSalesWithPriceSelector() {
     }
   };
 
-
-
-  const getCurrentStock = () => {
-    if (!selectedVariety) return 0;
-    return availablePriceOptions.reduce((sum, opt) => sum + opt.quantity_remaining, 0);
-  };
-
-
   const handleDelete = async (id) => {
     if (!confirm('Delete this sale? This action cannot be undone.')) return;
 
     try {
-      await fetch(`${API_BASE_URL}/sales/${id}`, { method: 'DELETE' });
+      // ✅ FIXED: Using authenticated API
+      await api.delete(`/sales/${id}`);
       loadSales();
       loadSupplierInventories();
       alert('Sale deleted successfully!');
     } catch (error) {
+      console.error('Failed to delete sale:', error);
       alert('Failed to delete sale');
     }
   };
@@ -143,13 +93,10 @@ export default function EnhancedSalesWithPriceSelector() {
     return sum + getItemCount(item.quantity, item.variety.measurement_unit);
   }, 0);
 
-
-
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
 
-        {/* Header Section */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -187,19 +134,18 @@ export default function EnhancedSalesWithPriceSelector() {
           </div>
         </div>
 
-           <SalesForm
-        show={showForm}
-        onClose={() => setShowForm(false)}
-        onSubmit={() => {
-          loadSales();
-          loadSupplierInventories();
-        }}
-        varieties={varieties}
-        supplierInventories={supplierInventories}
-        API_BASE_URL={API_BASE_URL}
-      />
+        <SalesForm
+          show={showForm}
+          onClose={() => setShowForm(false)}
+          onSubmit={() => {
+            loadSales();
+            loadSupplierInventories();
+          }}
+          varieties={varieties}
+          supplierInventories={supplierInventories}
+          API_BASE_URL="http://127.0.0.1:8000"
+        />
 
-        {/* Sales Summary Cards */}
         {!loading && sales.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="relative group">
@@ -243,7 +189,6 @@ export default function EnhancedSalesWithPriceSelector() {
           </div>
         )}
 
-        {/* Sales Table */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-200 bg-linear-to-r from-gray-50 to-white">
             <h3 className="text-xl font-bold text-gray-800">Sales Records</h3>
@@ -362,23 +307,6 @@ export default function EnhancedSalesWithPriceSelector() {
           )}
         </div>
       </div>
-
-      <style>{`
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

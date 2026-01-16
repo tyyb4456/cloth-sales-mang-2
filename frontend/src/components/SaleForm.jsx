@@ -1,5 +1,8 @@
+// frontend/src/components/SaleForm.jsx - FIXED WITH AUTHENTICATION
+
 import { useState, useEffect, useRef } from 'react';
 import { X, AlertTriangle, CheckCircle } from 'lucide-react';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -11,10 +14,8 @@ const SalesForm = ({
   onClose, 
   onSubmit, 
   varieties = [], 
-  supplierInventories = [],
-  API_BASE_URL 
+  supplierInventories = []
 }) => {
-  // Load saved preferences
   const savedSalesperson = typeof window !== 'undefined' ? localStorage.getItem('lastSalesperson') || '' : '';
   const savedStockType = typeof window !== 'undefined' ? localStorage.getItem('lastStockType') || 'old_stock' : 'old_stock';
   const savedPaymentStatus = typeof window !== 'undefined' ? localStorage.getItem('lastPaymentStatus') || 'paid' : 'paid';
@@ -45,12 +46,10 @@ const SalesForm = ({
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Refs for auto-focus
   const quantityRef = useRef(null);
   const sellingPriceRef = useRef(null);
   const varietyInputRef = useRef(null);
 
-  // Save preferences
   useEffect(() => {
     if (formData.salesperson_name) {
       localStorage.setItem('lastSalesperson', formData.salesperson_name);
@@ -65,7 +64,6 @@ const SalesForm = ({
     localStorage.setItem('lastPaymentStatus', formData.payment_status);
   }, [formData.payment_status]);
 
-  // Clear success message after 3 seconds
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(''), 3000);
@@ -136,7 +134,6 @@ const SalesForm = ({
       setFormData(prev => ({ ...prev, cost_price: cost.toString() }));
     }
 
-    // Auto-focus quantity after variety selected
     setTimeout(() => quantityRef.current?.focus(), 100);
   };
 
@@ -206,7 +203,6 @@ const SalesForm = ({
     return { costPerUnit, sellingPerUnit, totalProfit, profitPerUnit };
   };
 
-  // Keyboard navigation for variety dropdown
   const handleVarietyKeyDown = (e) => {
     if (!showVarietyDropdown || filteredVarieties.length === 0) return;
 
@@ -228,7 +224,6 @@ const SalesForm = ({
     }
   };
 
-  // Validate form
   const isFormValid = () => {
     if (!formData.salesperson_name || !formData.variety_id || !formData.quantity || 
         !formData.cost_price || !formData.selling_price) {
@@ -286,18 +281,9 @@ const SalesForm = ({
         payload.supplier_inventory_id = formData.selected_inventory_id;
       }
 
-      const saleResponse = await fetch(`${API_BASE_URL}/sales/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!saleResponse.ok) {
-        const error = await saleResponse.json();
-        throw new Error(error.detail || 'Failed to record sale');
-      }
-
-      const saleData = await saleResponse.json();
+      // ✅ FIXED: Using authenticated API
+      const saleResponse = await api.post('/sales/', payload);
+      const saleData = saleResponse.data;
 
       if (formData.payment_status === 'loan') {
         const loanPayload = {
@@ -309,11 +295,8 @@ const SalesForm = ({
           notes: formData.loan_notes || null
         };
 
-        await fetch(`${API_BASE_URL}/loans/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(loanPayload)
-        });
+        // ✅ FIXED: Using authenticated API
+        await api.post('/loans/', loanPayload);
       }
 
       setSuccessMessage('Sale recorded successfully');
@@ -322,7 +305,8 @@ const SalesForm = ({
         onSubmit();
       }, 1000);
     } catch (error) {
-      setInlineError(error.message);
+      console.error('Failed to record sale:', error);
+      setInlineError(error.response?.data?.detail || 'Failed to record sale');
     } finally {
       setIsSubmitting(false);
     }
@@ -343,7 +327,6 @@ const SalesForm = ({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 w-full max-w-3xl my-8">
         
-        {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">New Sale</h3>
           <button 
@@ -354,7 +337,6 @@ const SalesForm = ({
           </button>
         </div>
 
-        {/* Success Message */}
         {successMessage && (
           <div className="mx-6 mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
             <CheckCircle size={16} />
@@ -362,7 +344,6 @@ const SalesForm = ({
           </div>
         )}
 
-        {/* Error Message */}
         {inlineError && (
           <div className="mx-6 mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-sm text-red-800 dark:text-red-200">
             <AlertTriangle size={16} />
@@ -372,7 +353,6 @@ const SalesForm = ({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           
-          {/* Basic Information */}
           <div>
             <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Basic Information</h4>
             <div className="grid grid-cols-2 gap-4">
@@ -441,10 +421,8 @@ const SalesForm = ({
             </div>
           </div>
 
-          {/* Only show after variety selected */}
           {selectedVariety && (
             <>
-              {/* Stock & Payment Type */}
               <div>
                 <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Sale Type</h4>
                 <div className="grid grid-cols-2 gap-4">
@@ -528,7 +506,6 @@ const SalesForm = ({
                 </div>
               </div>
 
-              {/* Customer Info - Progressive Disclosure */}
               {formData.payment_status === 'loan' && (
                 <div>
                   <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Customer Information</h4>
@@ -588,7 +565,6 @@ const SalesForm = ({
                 </div>
               )}
 
-              {/* Price Selector - Progressive Disclosure */}
               {showPriceSelector && availablePriceOptions.length > 1 && (
                 <div>
                   <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Select Price Option</h4>
@@ -623,7 +599,6 @@ const SalesForm = ({
                 </div>
               )}
 
-              {/* Selected Price Display */}
               {selectedPriceOption && !showPriceSelector && formData.stock_type === 'new_stock' && (
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div className="text-sm text-gray-700 dark:text-gray-300">
@@ -642,7 +617,6 @@ const SalesForm = ({
                 </div>
               )}
 
-{/* Stock Alert */}
               {formData.stock_type === 'new_stock' && (
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -657,7 +631,6 @@ const SalesForm = ({
                 </div>
               )}
 
-              {/* Sale Details */}
               <div>
                 <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Sale Details</h4>
                 <div className="grid grid-cols-2 gap-4">
@@ -747,7 +720,6 @@ const SalesForm = ({
                 </div>
               </div>
 
-              {/* Profit Display - Progressive Disclosure */}
               {formData.quantity && formData.cost_price && formData.selling_price && (
                 <div className="p-5 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div className="grid grid-cols-2 gap-6">
@@ -769,7 +741,6 @@ const SalesForm = ({
             </>
           )}
 
-          {/* Action Buttons */}
           <div className="flex gap-3 pt-2">
             <button
               type="submit"

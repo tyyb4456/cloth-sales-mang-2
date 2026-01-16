@@ -1,10 +1,10 @@
+// frontend/src/pages/AnalyticsDashboard.jsx - FIXED WITH AUTHENTICATION
+
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Award, AlertCircle, Users } from 'lucide-react';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
-const API_BASE_URL = 'http://localhost:8000';
-
-// Helper function to get item count
 const getItemCount = (quantity, unit) => {
   if (unit === 'meters' || unit === 'yards') return 1;
   return parseFloat(quantity);
@@ -25,25 +25,21 @@ const fetchRealAnalytics = async (days) => {
   try {
     const { startDate, endDate } = getDateRange(days);
 
+    // ✅ FIXED: Using authenticated API
     const [salesRes, inventoryRes, returnsRes, varietiesRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/sales/`),
-      fetch(`${API_BASE_URL}/supplier/inventory`),
-      fetch(`${API_BASE_URL}/supplier/returns`),
-      fetch(`${API_BASE_URL}/varieties/`)
+      api.get('/sales/'),
+      api.get('/supplier/inventory'),
+      api.get('/supplier/returns'),
+      api.get('/varieties/')
     ]);
 
-    if (!salesRes.ok || !inventoryRes.ok || !returnsRes.ok || !varietiesRes.ok) {
-      throw new Error('Failed to fetch data');
-    }
+    const [allSales, allInventory, allReturns, varieties] = [
+      salesRes.data,
+      inventoryRes.data,
+      returnsRes.data,
+      varietiesRes.data
+    ];
 
-    const [allSales, allInventory, allReturns, varieties] = await Promise.all([
-      salesRes.json(),
-      inventoryRes.json(),
-      returnsRes.json(),
-      varietiesRes.json()
-    ]);
-
-    // Filter data based on date range
     const sales = allSales.filter(s => {
       const saleDate = new Date(s.sale_date);
       saleDate.setHours(0, 0, 0, 0);
@@ -62,19 +58,11 @@ const fetchRealAnalytics = async (days) => {
       return returnDate >= startDate && returnDate <= endDate;
     });
 
-    console.log(`📊 Analyzing ${days} days:`, {
-      totalSales: sales.length,
-      dateRange: `${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`
-    });
-
-    // Create variety map
     const varietyMap = {};
     varieties.forEach(v => {
       varietyMap[v.id] = v;
     });
 
-    // CORRECT CALCULATION - Match Reports page logic
-    // Calculate totals EXACTLY like the backend does
     const totalRevenue = sales.reduce((sum, sale) => 
       sum + (parseFloat(sale.selling_price) * parseFloat(sale.quantity)), 0
     );
@@ -93,7 +81,6 @@ const fetchRealAnalytics = async (days) => {
     const avgOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
-    // Growth calculation
     const midPoint = Math.floor(days / 2);
     const midDate = new Date(startDate);
     midDate.setDate(midDate.getDate() + midPoint);
@@ -112,15 +99,13 @@ const fetchRealAnalytics = async (days) => {
       ? ((secondHalfRevenue - firstHalfRevenue) / firstHalfRevenue) * 100
       : 0;
 
-    // FIXED: Sales trend data - Initialize with zeros
     const salesByDate = {};
     
-    // Fix timezone issue: use the date string directly without converting
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      const dateKey = `${year}-${month}-${day}`; // YYYY-MM-DD format
+      const dateKey = `${year}-${month}-${day}`;
       
       salesByDate[dateKey] = { 
         date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -131,11 +116,9 @@ const fetchRealAnalytics = async (days) => {
       };
     }
 
-    // CRITICAL FIX: Calculate revenue exactly like Reports page
     sales.forEach(sale => {
       const dateKey = sale.sale_date;
       if (salesByDate[dateKey]) {
-        // Match the backend calculation exactly
         const saleRevenue = parseFloat(sale.selling_price) * parseFloat(sale.quantity);
         const saleProfit = parseFloat(sale.profit);
         
@@ -149,14 +132,6 @@ const fetchRealAnalytics = async (days) => {
       new Date(a.dateKey) - new Date(b.dateKey)
     );
 
-    // Debug: Log a few sample dates
-    console.log('📈 Sample sales data:', salesData.slice(-5).map(d => ({
-      date: d.date,
-      revenue: d.revenue.toFixed(2),
-      profit: d.profit.toFixed(2)
-    })));
-
-    // Product stats
     const productStats = {};
     sales.forEach(sale => {
       const variety = varietyMap[sale.variety_id];
@@ -191,7 +166,6 @@ const fetchRealAnalytics = async (days) => {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
-    // Salesperson performance
     const salespersonStats = {};
     sales.forEach(sale => {
       const variety = varietyMap[sale.variety_id];
@@ -228,7 +202,6 @@ const fetchRealAnalytics = async (days) => {
     const salespersonPerformance = Object.values(salespersonStats)
       .sort((a, b) => b.revenue - a.revenue);
 
-    // Supplier performance
     const supplierStats = {};
 
     inventory.forEach(inv => {
@@ -258,7 +231,6 @@ const fetchRealAnalytics = async (days) => {
       .sort((a, b) => b.netAmount - a.netAmount)
       .slice(0, 5);
 
-    // Product mix
     const totalRevenueByProduct = topProducts.reduce((sum, p) => sum + p.revenue, 0);
     const productMix = topProducts.map(product => ({
       name: product.name,
@@ -268,13 +240,6 @@ const fetchRealAnalytics = async (days) => {
 
     const topProduct = topProducts.length > 0 ? topProducts[0] : null;
     const topProductShare = topProduct && totalRevenue > 0 ? (topProduct.revenue / totalRevenue) * 100 : 0;
-
-    console.log('✅ Final KPIs:', {
-      totalRevenue: totalRevenue.toFixed(2),
-      totalProfit: totalProfit.toFixed(2),
-      totalSales,
-      dataPoints: salesData.length
-    });
 
     return {
       kpis: {
@@ -405,7 +370,6 @@ const AnalyticsDashboard = () => {
           </div>
         </div>
 
-        {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <KPICard
             title="Total Revenue"
@@ -440,7 +404,6 @@ const AnalyticsDashboard = () => {
           />
         </div>
 
-        {/* Sales Trend Chart */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             Sales Trend ({timeRange} Days)
@@ -491,7 +454,6 @@ const AnalyticsDashboard = () => {
           )}
         </div>
 
-               {/* Top 5 Products by Profit - NEW BAR CHART */}
         {analytics.topProducts && analytics.topProducts.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Top 5 Products by Profit</h2>
@@ -516,7 +478,6 @@ const AnalyticsDashboard = () => {
                   }}
                   formatter={(value) => [`₹${value.toLocaleString()}`, 'Profit']}
                 />
-                {/* <Legend /> */}
                 <Bar
                   dataKey="profit"
                   fill="#8FAEA3"
@@ -527,7 +488,6 @@ const AnalyticsDashboard = () => {
               </BarChart>
             </ResponsiveContainer>
 
-            {/* Profit Summary Table */}
             <div className="mt-6 overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -598,7 +558,6 @@ const AnalyticsDashboard = () => {
                       />
                     ))}
                   </Pie>
-
                   <Tooltip formatter={(value, name, props) => [`₹${props.payload.amount.toLocaleString()}`, 'Revenue']} />
                 </PieChart>
               </ResponsiveContainer>
@@ -613,13 +572,11 @@ const AnalyticsDashboard = () => {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={analytics.topProducts.slice(0, 5)} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-
                   <XAxis
                     type="number"
                     stroke="#9CA3AF"
                     style={{ fontSize: '12px' }}
                   />
-
                   <YAxis
                     dataKey="name"
                     type="category"
@@ -627,7 +584,6 @@ const AnalyticsDashboard = () => {
                     style={{ fontSize: '12px' }}
                     width={110}
                   />
-
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#fff',
@@ -637,7 +593,6 @@ const AnalyticsDashboard = () => {
                     }}
                     formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
                   />
-
                   <Bar
                     dataKey="revenue"
                     fill="#7C8DB0"
@@ -646,15 +601,12 @@ const AnalyticsDashboard = () => {
                   />
                 </BarChart>
               </ResponsiveContainer>
-
             ) : (
               <p className="text-center text-gray-500 py-8">No product data available</p>
             )}
           </div>
         </div>
 
-
-        {/* Salesperson Performance - ENHANCED */}
         {analytics.salespersonPerformance && analytics.salespersonPerformance.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
             <div className="p-6 border-b border-gray-200 bg-linear-to-r from-gray-50 to-gray-100">
@@ -795,15 +747,7 @@ const AnalyticsDashboard = () => {
           </div>
         )}
 
-
-
-
-
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-
-          {/* Supplier Reliability */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">Supplier Reliability</h2>
@@ -848,11 +792,8 @@ const AnalyticsDashboard = () => {
                 <p className="text-center text-gray-500 py-8">No supplier data available</p>
               )}
             </div>
-
           </div>
         </div>
-
-        {/* Rest of the dashboard remains the same... */}
       </div>
     </div>
   );

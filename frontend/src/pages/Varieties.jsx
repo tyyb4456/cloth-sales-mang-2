@@ -1,8 +1,8 @@
-// frontend/src/pages/Varieties.jsx - UPDATED with price field
+// frontend/src/pages/Varieties.jsx - FIXED WITH AUTHENTICATION
 
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, X, Save, Package } from 'lucide-react';
-import { getVarieties, createVariety, deleteVariety, updateVariety } from '../api/api';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 export default function Varieties() {
   const [varieties, setVarieties] = useState([]);
@@ -15,7 +15,7 @@ export default function Varieties() {
     description: '',
     measurement_unit: 'pieces',
     standard_length: '',
-    default_cost_price: '', // ✨ NEW
+    default_cost_price: '',
   });
 
   const units = [
@@ -31,9 +31,11 @@ export default function Varieties() {
   const loadVarieties = async () => {
     setLoading(true);
     try {
-      const res = await getVarieties();
+      // ✅ FIXED: Using authenticated API
+      const res = await api.get('/varieties/');
       setVarieties(Array.isArray(res.data) ? res.data : []);
-    } catch {
+    } catch (error) {
+      console.error('Failed to load varieties:', error);
       alert('Failed to load varieties');
     } finally {
       setLoading(false);
@@ -53,20 +55,23 @@ export default function Varieties() {
           : Number(formData.standard_length),
       default_cost_price: formData.default_cost_price 
         ? Number(formData.default_cost_price) 
-        : null, // ✨ NEW
+        : null,
     };
 
     try {
       if (editingId) {
-        await updateVariety(editingId, payload);
+        // ✅ FIXED: Using authenticated API
+        await api.put(`/varieties/${editingId}`, payload);
         alert('Variety updated successfully!');
       } else {
-        await createVariety(payload);
+        // ✅ FIXED: Using authenticated API
+        await api.post('/varieties/', payload);
         alert('Variety created successfully!');
       }
       resetForm();
       loadVarieties();
     } catch (err) {
+      console.error('Failed to save variety:', err);
       alert(err.response?.data?.detail || 'Failed to save variety');
     }
   };
@@ -78,7 +83,7 @@ export default function Varieties() {
       description: variety.description || '',
       measurement_unit: variety.measurement_unit,
       standard_length: variety.standard_length || '',
-      default_cost_price: variety.default_cost_price || '', // ✨ NEW
+      default_cost_price: variety.default_cost_price || '',
     });
     setShowForm(true);
   };
@@ -86,10 +91,12 @@ export default function Varieties() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this variety?')) return;
     try {
-      await deleteVariety(id);
+      // ✅ FIXED: Using authenticated API
+      await api.delete(`/varieties/${id}`);
       loadVarieties();
       alert('Variety deleted successfully!');
-    } catch {
+    } catch (error) {
+      console.error('Failed to delete variety:', error);
       alert('Failed to delete variety');
     }
   };
@@ -100,7 +107,7 @@ export default function Varieties() {
       description: '',
       measurement_unit: 'pieces',
       standard_length: '',
-      default_cost_price: '', // ✨ NEW
+      default_cost_price: '',
     });
     setShowForm(false);
     setEditingId(null);
@@ -133,7 +140,7 @@ export default function Varieties() {
             </button>
           </div>
 
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Variety Name *
@@ -186,7 +193,6 @@ export default function Varieties() {
               </div>
             )}
 
-            {/* ✨ NEW: Default Cost Price Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Default Cost Price (₹)
@@ -224,20 +230,21 @@ export default function Varieties() {
 
             <div className="flex gap-3 pt-2">
               <button
-                onClick={handleSubmit}
+                type="submit"
                 className="flex items-center px-6 py-3 rounded-lg bg-gray-700 text-white font-medium hover:bg-gray-800 transition hover:shadow-lg"
               >
                 <Save size={18} className="mr-2" />
                 {editingId ? 'Update' : 'Create'}
               </button>
               <button
+                type="button"
                 onClick={resetForm}
                 className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
               >
                 Cancel
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 

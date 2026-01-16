@@ -1,467 +1,291 @@
-# app/routes/customer_loans.py - FULLY UPDATED WITH MULTI-TENANCY
-# Customer Loan Management API Routes
+# app/routes/inventory.py - UPDATED WITH MULTI-TENANCY
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from typing import List
 from datetime import date
 from decimal import Decimal
 from database import get_db
-from models import CustomerLoan, LoanPayment, Sale, LoanStatus, PaymentStatus
-from schemas import (
-    CustomerLoanCreate, CustomerLoanResponse, 
-    LoanPaymentCreate, LoanPaymentResponse,
-    CustomerLoanSummary
-)
-from routes.auth_routes import get_current_tenant  # 🆕 CORRECTED IMPORT
-from auth_models import Tenant
+from models import ClothVariety, SupplierInventory, Sale, SupplierReturn, InventoryMovement
+from schemas import InventoryStatusResponse, InventoryMovementResponse
 
-router = APIRouter(prefix="/loans", tags=["Customer Loans"])
+from routes.auth_routes import get_current_tenant  # 🆕 IMPORT
+from auth_models import Tenant  # 🆕 IMPORT
+
+router = APIRouter(prefix="/inventory", tags=["Inventory Management"])
 
 
-@router.post("/", response_model=CustomerLoanResponse, status_code=status.HTTP_201_CREATED)
-def create_customer_loan(
-    loan: CustomerLoanCreate,
+@router.get("/status", response_model=List[InventoryStatusResponse])
+def get_inventory_status(
     tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
     db: Session = Depends(get_db)
 ):
     """
-    Create a new customer loan record (tenant-isolated)
-    This is automatically called when a sale is made with payment_status='loan'
+    Get current inventory status for all varieties with stock information (tenant-isolated)
     """
-    # 🆕 Verify sale exists FOR THIS TENANT
-    sale = db.query(Sale).filter(
-        Sale.id == loan.sale_id,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
+    # 🆕 Filter varieties by tenant
+    varieties = db.query(ClothVariety).filter(
+        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+    ).all()
     
-    if not sale:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Sale with ID {loan.sale_id} not found in your business"
-        )
+    inventory_status = []
     
-    # 🆕 Check if loan already exists for this sale (TENANT FILTERED)
-    existing_loan = db.query(CustomerLoan).filter(
-        CustomerLoan.sale_id == loan.sale_id,
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
-    
-    if existing_loan:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Loan already exists for sale ID {loan.sale_id}"
-        )
-    
-    # Create loan
-    db_loan = CustomerLoan(
-        tenant_id=tenant.id,  # 🆕 SET TENANT
-        customer_name=loan.customer_name,
-        customer_phone=loan.customer_phone,
-        sale_id=loan.sale_id,
-        total_loan_amount=loan.total_loan_amount,
-        amount_paid=Decimal('0.00'),
-        amount_remaining=loan.total_loan_amount,
-        loan_status=LoanStatus.PENDING,
-        loan_date=sale.sale_date,
-        due_date=loan.due_date,
-        notes=loan.notes
-    )
-    
-    db.add(db_loan)
-    db.commit()
-    db.refresh(db_loan)
-    
-    return db_loan
-
-
-@router.get("/", response_model=List[CustomerLoanResponse])
-def get_all_loans(
-    status: str = None,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
-    db: Session = Depends(get_db)
-):
-    """Get all customer loans (tenant-isolated), optionally filtered by status"""
-    
-    # 🆕 Start with tenant filter
-    query = db.query(CustomerLoan).filter(
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    )
-    
-    if status:
-        if status not in ['pending', 'partial', 'paid']:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Status must be 'pending', 'partial', or 'paid'"
+    for variety in varieties:
+        # 🆕 Calculate total supplied (TENANT FILTERED)
+        total_supplied = db.query(
+            func.sum(SupplierInventory.quantity)
+        ).filter(
+            SupplierInventory.variety_id == variety.id,
+            SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ).scalar() or Decimal('0')
+        
+        # 🆕 Calculate total sold from new stock (TENANT FILTERED)
+        total_sold = db.query(
+            func.sum(Sale.quantity)
+        ).filter(
+            Sale.variety_id == variety.id,
+            Sale.stock_type == 'new_stock',
+            Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ).scalar() or Decimal('0')
+        
+        # 🆕 Calculate total returned (TENANT FILTERED)
+        total_returned = db.query(
+            func.sum(SupplierReturn.quantity)
+        ).filter(
+            SupplierReturn.variety_id == variety.id,
+            SupplierReturn.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ).scalar() or Decimal('0')
+        
+        # Check if low stock
+        is_low_stock = False
+        if variety.min_stock_level:
+            is_low_stock = variety.current_stock <= variety.min_stock_level
+        
+        inventory_status.append(
+            InventoryStatusResponse(
+                variety_id=variety.id,
+                variety_name=variety.name,
+                current_stock=variety.current_stock,
+                min_stock_level=variety.min_stock_level,
+                is_low_stock=is_low_stock,
+                total_supplied=total_supplied,
+                total_sold=total_sold,
+                total_returned=total_returned,
+                measurement_unit=variety.measurement_unit.value
             )
-        query = query.filter(CustomerLoan.loan_status == status)
-    
-    loans = query.order_by(CustomerLoan.loan_date.desc()).all()
-    return loans
-
-
-@router.get("/customer/{customer_name}", response_model=List[CustomerLoanResponse])
-def get_loans_by_customer(
-    customer_name: str,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
-    db: Session = Depends(get_db)
-):
-    """Get all loans for a specific customer (tenant-isolated)"""
-    
-    # 🆕 Case-insensitive search WITH TENANT FILTER
-    loans = db.query(CustomerLoan).filter(
-        func.lower(CustomerLoan.customer_name).like(f"%{customer_name.lower()}%"),
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).order_by(CustomerLoan.loan_date.desc()).all()
-    
-    if not loans:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No loans found for customer '{customer_name}' in your business"
         )
     
-    return loans
+    return inventory_status
 
 
-@router.get("/search/{search_term}", response_model=List[CustomerLoanResponse])
-def search_loans(
-    search_term: str,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
-    db: Session = Depends(get_db)
-):
-    """Search loans by customer name or phone (tenant-isolated)"""
-    
-    # 🆕 Search WITH TENANT FILTER
-    loans = db.query(CustomerLoan).filter(
-        or_(
-            func.lower(CustomerLoan.customer_name).like(f"%{search_term.lower()}%"),
-            CustomerLoan.customer_phone.like(f"%{search_term}%")
-        ),
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).order_by(CustomerLoan.loan_date.desc()).all()
-    
-    return loans
-
-
-@router.get("/{loan_id}", response_model=CustomerLoanResponse)
-def get_loan_details(
-    loan_id: int,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
-    db: Session = Depends(get_db)
-):
-    """Get detailed information about a specific loan (tenant-isolated)"""
-    
-    # 🆕 Get loan WITH TENANT FILTER
-    loan = db.query(CustomerLoan).filter(
-        CustomerLoan.id == loan_id,
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
-    
-    if not loan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Loan with ID {loan_id} not found in your business"
-        )
-    
-    return loan
-
-
-@router.post("/{loan_id}/payments", response_model=CustomerLoanResponse)
-def record_payment(
-    loan_id: int,
-    payment: LoanPaymentCreate,
+@router.get("/status/{variety_id}", response_model=InventoryStatusResponse)
+def get_variety_inventory_status(
+    variety_id: int,
     tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
     db: Session = Depends(get_db)
 ):
     """
-    Record a payment for a loan (partial or full) - tenant-isolated
-    Automatically updates loan status and remaining amount
+    Get current inventory status for a specific variety (tenant-isolated)
     """
-    
-    # 🆕 Get loan WITH TENANT FILTER
-    loan = db.query(CustomerLoan).filter(
-        CustomerLoan.id == loan_id,
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
+    # 🆕 Get variety WITH TENANT FILTER
+    variety = db.query(ClothVariety).filter(
+        ClothVariety.id == variety_id,
+        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
     ).first()
     
-    if not loan:
+    if not variety:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Loan with ID {loan_id} not found in your business"
+            detail=f"Variety with ID {variety_id} not found in your business"
         )
     
-    if loan.loan_status == LoanStatus.PAID:
+    # 🆕 Calculate totals (TENANT FILTERED)
+    total_supplied = db.query(
+        func.sum(SupplierInventory.quantity)
+    ).filter(
+        SupplierInventory.variety_id == variety_id,
+        SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+    ).scalar() or Decimal('0')
+    
+    total_sold = db.query(
+        func.sum(Sale.quantity)
+    ).filter(
+        Sale.variety_id == variety_id,
+        Sale.stock_type == 'new_stock',
+        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+    ).scalar() or Decimal('0')
+    
+    total_returned = db.query(
+        func.sum(SupplierReturn.quantity)
+    ).filter(
+        SupplierReturn.variety_id == variety_id,
+        SupplierReturn.tenant_id == tenant.id  # 🆕 TENANT FILTER
+    ).scalar() or Decimal('0')
+    
+    is_low_stock = False
+    if variety.min_stock_level:
+        is_low_stock = variety.current_stock <= variety.min_stock_level
+    
+    return InventoryStatusResponse(
+        variety_id=variety.id,
+        variety_name=variety.name,
+        current_stock=variety.current_stock,
+        min_stock_level=variety.min_stock_level,
+        is_low_stock=is_low_stock,
+        total_supplied=total_supplied,
+        total_sold=total_sold,
+        total_returned=total_returned,
+        measurement_unit=variety.measurement_unit.value
+    )
+
+
+@router.get("/movements/{variety_id}", response_model=List[InventoryMovementResponse])
+def get_inventory_movements(
+    variety_id: int,
+    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """
+    Get inventory movement history for a specific variety (tenant-isolated)
+    """
+    # 🆕 Verify variety exists FOR THIS TENANT
+    variety = db.query(ClothVariety).filter(
+        ClothVariety.id == variety_id,
+        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+    ).first()
+    
+    if not variety:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Variety with ID {variety_id} not found in your business"
+        )
+    
+    # 🆕 Get movements WITH TENANT FILTER
+    movements = db.query(InventoryMovement).filter(
+        InventoryMovement.variety_id == variety_id,
+        InventoryMovement.tenant_id == tenant.id  # 🆕 TENANT FILTER
+    ).order_by(
+        InventoryMovement.created_at.desc()
+    ).limit(limit).all()
+    
+    return movements
+
+
+@router.get("/low-stock", response_model=List[InventoryStatusResponse])
+def get_low_stock_items(
+    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    db: Session = Depends(get_db)
+):
+    """
+    Get all varieties that are below their minimum stock level (tenant-isolated)
+    """
+    # 🆕 Filter varieties WITH TENANT
+    varieties = db.query(ClothVariety).filter(
+        ClothVariety.min_stock_level.isnot(None),
+        ClothVariety.current_stock <= ClothVariety.min_stock_level,
+        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+    ).all()
+    
+    low_stock_items = []
+    
+    for variety in varieties:
+        # 🆕 All calculations TENANT FILTERED
+        total_supplied = db.query(
+            func.sum(SupplierInventory.quantity)
+        ).filter(
+            SupplierInventory.variety_id == variety.id,
+            SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ).scalar() or Decimal('0')
+        
+        total_sold = db.query(
+            func.sum(Sale.quantity)
+        ).filter(
+            Sale.variety_id == variety.id,
+            Sale.stock_type == 'new_stock',
+            Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ).scalar() or Decimal('0')
+        
+        total_returned = db.query(
+            func.sum(SupplierReturn.quantity)
+        ).filter(
+            SupplierReturn.variety_id == variety.id,
+            SupplierReturn.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ).scalar() or Decimal('0')
+        
+        low_stock_items.append(
+            InventoryStatusResponse(
+                variety_id=variety.id,
+                variety_name=variety.name,
+                current_stock=variety.current_stock,
+                min_stock_level=variety.min_stock_level,
+                is_low_stock=True,
+                total_supplied=total_supplied,
+                total_sold=total_sold,
+                total_returned=total_returned,
+                measurement_unit=variety.measurement_unit.value
+            )
+        )
+    
+    return low_stock_items
+
+
+@router.post("/adjust/{variety_id}")
+def adjust_inventory(
+    variety_id: int,
+    quantity: float,
+    notes: str,
+    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    db: Session = Depends(get_db)
+):
+    """
+    Manually adjust inventory (tenant-isolated)
+    For corrections, damaged goods, etc.
+    Positive quantity = add stock, Negative quantity = remove stock
+    """
+    # 🆕 Get variety WITH TENANT FILTER
+    variety = db.query(ClothVariety).filter(
+        ClothVariety.id == variety_id,
+        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+    ).first()
+    
+    if not variety:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Variety with ID {variety_id} not found in your business"
+        )
+    
+    quantity_decimal = Decimal(str(quantity))
+    
+    # Update stock
+    variety.current_stock += quantity_decimal
+    
+    if variety.current_stock < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This loan has already been fully paid"
+            detail="Adjustment would result in negative stock"
         )
     
-    # Validate payment amount
-    if payment.payment_amount > loan.amount_remaining:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Payment amount (₹{payment.payment_amount}) exceeds remaining balance (₹{loan.amount_remaining})"
-        )
-    
-    # Create payment record
-    db_payment = LoanPayment(
-        loan_id=loan_id,
-        payment_amount=payment.payment_amount,
-        payment_date=payment.payment_date,
-        payment_method=payment.payment_method,
-        notes=payment.notes
+    # 🆕 Log the adjustment WITH TENANT
+    inventory_movement = InventoryMovement(
+        tenant_id=tenant.id,  # 🆕 SET TENANT
+        variety_id=variety_id,
+        movement_type='manual_adjustment',
+        quantity=quantity_decimal,
+        reference_type='manual',
+        notes=notes,
+        movement_date=date.today(),
+        stock_after=variety.current_stock
     )
     
-    db.add(db_payment)
-    
-    # Update loan
-    loan.amount_paid += payment.payment_amount
-    loan.amount_remaining -= payment.payment_amount
-    
-    # Update loan status
-    if loan.amount_remaining == 0:
-        loan.loan_status = LoanStatus.PAID
-    elif loan.amount_paid > 0:
-        loan.loan_status = LoanStatus.PARTIAL
-    
-    db.commit()
-    db.refresh(loan)
-    
-    return loan
-
-
-@router.get("/{loan_id}/payments", response_model=List[LoanPaymentResponse])
-def get_loan_payments(
-    loan_id: int,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
-    db: Session = Depends(get_db)
-):
-    """Get all payments for a specific loan (tenant-isolated)"""
-    
-    # 🆕 Verify loan exists FOR THIS TENANT
-    loan = db.query(CustomerLoan).filter(
-        CustomerLoan.id == loan_id,
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
-    
-    if not loan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Loan with ID {loan_id} not found in your business"
-        )
-    
-    # Get payments for this loan
-    payments = db.query(LoanPayment).filter(
-        LoanPayment.loan_id == loan_id
-    ).order_by(LoanPayment.payment_date.desc()).all()
-    
-    return payments
-
-
-@router.get("/summary/customers", response_model=List[CustomerLoanSummary])
-def get_customer_loan_summary(
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
-    db: Session = Depends(get_db)
-):
-    """Get summary of loans for each customer (tenant-isolated)"""
-    
-    # 🆕 Aggregate WITH TENANT FILTER
-    result = db.query(
-        CustomerLoan.customer_name,
-        func.count(CustomerLoan.id).label('total_loans'),
-        func.sum(CustomerLoan.total_loan_amount).label('total_loan_amount'),
-        func.sum(CustomerLoan.amount_paid).label('total_paid'),
-        func.sum(CustomerLoan.amount_remaining).label('total_remaining'),
-        func.min(CustomerLoan.loan_date).label('oldest_loan_date'),
-        func.max(CustomerLoan.loan_date).label('newest_loan_date')
-    ).filter(
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).group_by(CustomerLoan.customer_name).all()
-    
-    summaries = []
-    for row in result:
-        summaries.append(CustomerLoanSummary(
-            customer_name=row.customer_name,
-            total_loans=row.total_loans,
-            total_loan_amount=row.total_loan_amount or Decimal('0.00'),
-            total_paid=row.total_paid or Decimal('0.00'),
-            total_remaining=row.total_remaining or Decimal('0.00'),
-            oldest_loan_date=row.oldest_loan_date,
-            newest_loan_date=row.newest_loan_date
-        ))
-    
-    return summaries
-
-
-@router.get("/summary/status")
-def get_loan_status_summary(
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
-    db: Session = Depends(get_db)
-):
-    """Get overall loan statistics (tenant-isolated)"""
-    
-    # 🆕 Total loans by status WITH TENANT FILTER
-    status_counts = db.query(
-        CustomerLoan.loan_status,
-        func.count(CustomerLoan.id).label('count'),
-        func.sum(CustomerLoan.total_loan_amount).label('total_amount'),
-        func.sum(CustomerLoan.amount_remaining).label('total_remaining')
-    ).filter(
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).group_by(CustomerLoan.loan_status).all()
-    
-    # 🆕 Overall totals WITH TENANT FILTER
-    totals = db.query(
-        func.count(CustomerLoan.id).label('total_loans'),
-        func.sum(CustomerLoan.total_loan_amount).label('total_loan_amount'),
-        func.sum(CustomerLoan.amount_paid).label('total_paid'),
-        func.sum(CustomerLoan.amount_remaining).label('total_outstanding')
-    ).filter(
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
-    
-    return {
-        "by_status": [
-            {
-                "status": row.loan_status,
-                "count": row.count,
-                "total_amount": float(row.total_amount or 0),
-                "total_remaining": float(row.total_remaining or 0)
-            }
-            for row in status_counts
-        ],
-        "overall": {
-            "total_loans": totals.total_loans or 0,
-            "total_loan_amount": float(totals.total_loan_amount or 0),
-            "total_paid": float(totals.total_paid or 0),
-            "total_outstanding": float(totals.total_outstanding or 0)
-        }
-    }
-
-
-@router.delete("/{loan_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_loan(
-    loan_id: int,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
-    db: Session = Depends(get_db)
-):
-    """Delete a loan record (tenant-isolated) - use with caution"""
-    
-    # 🆕 Get loan WITH TENANT FILTER
-    loan = db.query(CustomerLoan).filter(
-        CustomerLoan.id == loan_id,
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
-    
-    if not loan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Loan with ID {loan_id} not found in your business"
-        )
-    
-    # 🆕 Also update the associated sale (WITH TENANT VERIFICATION)
-    sale = db.query(Sale).filter(
-        Sale.id == loan.sale_id,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
-    
-    if sale:
-        sale.payment_status = PaymentStatus.PAID
-        sale.customer_name = None
-    
-    db.delete(loan)
+    db.add(inventory_movement)
     db.commit()
     
-    return None
-
-
-# 🆕 NEW ENDPOINT: Get loans by date range (tenant-isolated)
-@router.get("/date-range/{start_date}/{end_date}", response_model=List[CustomerLoanResponse])
-def get_loans_by_date_range(
-    start_date: date,
-    end_date: date,
-    tenant: Tenant = Depends(get_current_tenant),
-    db: Session = Depends(get_db)
-):
-    """Get all loans within a date range (tenant-isolated)"""
-    
-    loans = db.query(CustomerLoan).filter(
-        CustomerLoan.loan_date >= start_date,
-        CustomerLoan.loan_date <= end_date,
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).order_by(CustomerLoan.loan_date.desc()).all()
-    
-    return loans
-
-
-# 🆕 NEW ENDPOINT: Get overdue loans (tenant-isolated)
-@router.get("/overdue/list", response_model=List[CustomerLoanResponse])
-def get_overdue_loans(
-    tenant: Tenant = Depends(get_current_tenant),
-    db: Session = Depends(get_db)
-):
-    """Get all overdue loans (tenant-isolated)"""
-    
-    today = date.today()
-    
-    loans = db.query(CustomerLoan).filter(
-        CustomerLoan.due_date < today,
-        CustomerLoan.loan_status != LoanStatus.PAID,
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).order_by(CustomerLoan.due_date.asc()).all()
-    
-    return loans
-
-
-# 🆕 NEW ENDPOINT: Get monthly loan summary (tenant-isolated)
-@router.get("/summary/monthly/{year}/{month}")
-def get_monthly_loan_summary(
-    year: int,
-    month: int,
-    tenant: Tenant = Depends(get_current_tenant),
-    db: Session = Depends(get_db)
-):
-    """Get loan summary for a specific month (tenant-isolated)"""
-    
-    from calendar import monthrange
-    
-    start_date = date(year, month, 1)
-    _, last_day = monthrange(year, month)
-    end_date = date(year, month, last_day)
-    
-    # New loans created this month
-    new_loans = db.query(
-        func.count(CustomerLoan.id).label('count'),
-        func.sum(CustomerLoan.total_loan_amount).label('total')
-    ).filter(
-        CustomerLoan.loan_date >= start_date,
-        CustomerLoan.loan_date <= end_date,
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
-    
-    # Payments received this month
-    payments = db.query(
-        func.sum(LoanPayment.payment_amount).label('total')
-    ).join(CustomerLoan).filter(
-        LoanPayment.payment_date >= start_date,
-        LoanPayment.payment_date <= end_date,
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
-    
-    # Outstanding at end of month
-    outstanding = db.query(
-        func.sum(CustomerLoan.amount_remaining).label('total')
-    ).filter(
-        CustomerLoan.tenant_id == tenant.id  # 🆕 TENANT FILTER
-    ).first()
-    
     return {
-        "month": f"{year}-{month:02d}",
-        "new_loans": {
-            "count": new_loans.count or 0,
-            "total_amount": float(new_loans.total or 0)
-        },
-        "payments_received": float(payments.total or 0),
-        "total_outstanding": float(outstanding.total or 0)
+        "success": True,
+        "variety_id": variety_id,
+        "variety_name": variety.name,
+        "adjustment": float(quantity_decimal),
+        "new_stock_level": float(variety.current_stock)
     }

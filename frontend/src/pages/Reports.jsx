@@ -1,23 +1,14 @@
+// frontend/src/pages/Reports.jsx - FIXED WITH AUTHENTICATION
+
 import { useState, useEffect } from 'react';
 import { Calendar, TrendingUp, DollarSign, Users, Award, ShoppingCart } from 'lucide-react';
-import { format } from 'date-fns';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 const formatDate = (date) => {
   const d = new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
-
-const api = {
-  get: async (endpoint) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
-    if (!response.ok) throw new Error('API request failed');
-    return response.json();
-  }
-};
-
-// Helper function to get item count
 const getItemCount = (quantity, unit) => {
   if (unit === 'meters' || unit === 'yards') return 1;
   return parseFloat(quantity);
@@ -39,6 +30,9 @@ export default function Reports() {
   const [rangeReport, setRangeReport] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const [salesData, setSalesData] = useState([]);
+  const [varietyMap, setVarietyMap] = useState({});
+
   useEffect(() => {
     if (viewMode === 'daily') {
       loadDailyReports();
@@ -47,13 +41,10 @@ export default function Reports() {
     }
   }, [date, startDate, endDate, viewMode]);
 
-  // Add these state variables at the top of your component
-  const [salesData, setSalesData] = useState([]);
-  const [varietyMap, setVarietyMap] = useState({});
-
   const loadDailyReports = async () => {
     setLoading(true);
     try {
+      // ✅ FIXED: Using authenticated API
       const [dailyRes, profitRes, salesRes, varietiesRes] = await Promise.all([
         api.get(`/reports/daily/${date}`),
         api.get(`/reports/profit/${date}`),
@@ -61,25 +52,22 @@ export default function Reports() {
         api.get('/varieties/')
       ]);
 
-      // Create variety map
       const varietyMapTemp = {};
-      varietiesRes.forEach(v => {
+      varietiesRes.data.forEach(v => {
         varietyMapTemp[v.id] = v;
       });
 
-      // Calculate correct items sold using getItemCount
-      const correctItemCount = salesRes.reduce((sum, sale) => {
+      const correctItemCount = salesRes.data.reduce((sum, sale) => {
         const variety = varietyMapTemp[sale.variety_id];
         return sum + getItemCount(sale.quantity, variety?.measurement_unit || 'pieces');
       }, 0);
 
-      // Override the backend's total_quantity_sold with corrected value
-      dailyRes.sales_summary.total_quantity_sold = correctItemCount;
+      dailyRes.data.sales_summary.total_quantity_sold = correctItemCount;
 
-      setDailyReport(dailyRes);
-      setProfitReport(profitRes);
-      setSalesData(salesRes); // Store for later use
-      setVarietyMap(varietyMapTemp); // Store for later use
+      setDailyReport(dailyRes.data);
+      setProfitReport(profitRes.data);
+      setSalesData(salesRes.data);
+      setVarietyMap(varietyMapTemp);
     } catch (error) {
       console.error('Error loading reports:', error);
       setDailyReport(null);
@@ -88,21 +76,22 @@ export default function Reports() {
       setLoading(false);
     }
   };
+
   const loadRangeReport = async () => {
     setLoading(true);
     try {
+      // ✅ FIXED: Using authenticated API
       const [allSales, varieties] = await Promise.all([
         api.get('/sales/'),
         api.get('/varieties/')
       ]);
 
-      // Create variety map
       const varietyMap = {};
-      varieties.forEach(v => {
+      varieties.data.forEach(v => {
         varietyMap[v.id] = v;
       });
 
-      const filteredSales = allSales.filter(sale => {
+      const filteredSales = allSales.data.filter(sale => {
         const saleDate = new Date(sale.sale_date);
         return saleDate >= new Date(startDate) && saleDate <= new Date(endDate);
       });
@@ -119,9 +108,6 @@ export default function Reports() {
         const variety = varietyMap[sale.variety_id];
         return sum + getItemCount(sale.quantity, variety?.measurement_unit || 'pieces');
       }, 0);
-
-
-
 
       const productStats = filteredSales.reduce((acc, sale) => {
         const variety = varietyMap[sale.variety_id];
@@ -349,7 +335,6 @@ export default function Reports() {
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Profit by Variety</h3>
                   <div className="space-y-2">
                     {profitReport.profit_by_variety.map((item, index) => {
-                      // Calculate correct item count for this variety
                       const varietySales = salesData.filter(sale =>
                         sale.variety_id === item.variety_id
                       );
@@ -380,7 +365,6 @@ export default function Reports() {
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Profit by Salesperson</h3>
                   <div className="space-y-2">
                     {profitReport.profit_by_salesperson.map((item, index) => {
-                      // Calculate correct item count for this salesperson
                       const salespersonSales = salesData.filter(sale =>
                         sale.salesperson_name === item.salesperson_name
                       );
@@ -460,7 +444,6 @@ export default function Reports() {
               </p>
             </div>
           </div>
-
 
           {rangeReport.topProducts.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">

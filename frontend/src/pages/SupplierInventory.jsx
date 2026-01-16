@@ -1,12 +1,13 @@
+// frontend/src/pages/SupplierInventory.jsx - FIXED WITH AUTHENTICATION
+
 import { useState, useEffect } from 'react';
 import { Plus, Calendar, Trash2, TrendingUp, Package, ChevronLeft, ChevronRight } from 'lucide-react';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 const formatDate = (date) => {
   const d = new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
 
 export default function MonthlySupplierInventory() {
   const [varieties, setVarieties] = useState([]);
@@ -14,7 +15,6 @@ export default function MonthlySupplierInventory() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  // Month/Year selection
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
@@ -43,9 +43,9 @@ export default function MonthlySupplierInventory() {
 
   const loadVarieties = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/varieties/`);
-      const data = await response.json();
-      setVarieties(Array.isArray(data) ? data : []);
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get('/varieties/');
+      setVarieties(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading varieties:', error);
     }
@@ -54,9 +54,9 @@ export default function MonthlySupplierInventory() {
   const loadMonthlyInventory = async () => {
     setLoading(true);
     try {
-      // Get all inventory and filter by month
-      const response = await fetch(`${API_BASE_URL}/supplier/inventory`);
-      const data = await response.json();
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get('/supplier/inventory');
+      const data = response.data;
 
       const filtered = (Array.isArray(data) ? data : []).filter(item => {
         const itemDate = new Date(item.supply_date);
@@ -93,21 +93,13 @@ export default function MonthlySupplierInventory() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/supplier/inventory`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          variety_id: parseInt(formData.variety_id),
-          quantity: parseFloat(formData.quantity),
-          price_per_item: parseFloat(formData.price_per_item)
-        })
+      // ✅ FIXED: Using authenticated API
+      const response = await api.post('/supplier/inventory', {
+        ...formData,
+        variety_id: parseInt(formData.variety_id),
+        quantity: parseFloat(formData.quantity),
+        price_per_item: parseFloat(formData.price_per_item)
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to add inventory');
-      }
 
       alert('Inventory added successfully! Stock updated.');
       setFormData({
@@ -121,19 +113,22 @@ export default function MonthlySupplierInventory() {
       setSelectedVariety(null);
       setShowForm(false);
       loadMonthlyInventory();
-    } catch (error) {
-      alert(error.message);
+    } catch (err) {
+      console.error('Failed to add inventory:', err);
+      alert(err.response?.data?.detail || 'Failed to add inventory');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this inventory record? This will reduce stock levels.')) return;
+    if (!window.confirm('Delete this inventory record? This will reduce stock levels.')) return;
 
     try {
-      await fetch(`${API_BASE_URL}/supplier/inventory/${id}`, { method: 'DELETE' });
+      // ✅ FIXED: Using authenticated API
+      await api.delete(`/supplier/inventory/${id}`);
       loadMonthlyInventory();
       alert('Inventory deleted! Stock restored.');
     } catch (error) {
+      console.error('Failed to delete inventory:', error);
       alert(error.response?.data?.detail || 'Failed to delete inventory');
     }
   };
@@ -159,7 +154,6 @@ export default function MonthlySupplierInventory() {
     setCurrentYear(new Date().getFullYear());
   };
 
-  // Group by supplier
   const groupedBySupplier = inventory.reduce((acc, item) => {
     if (!acc[item.supplier_name]) {
       acc[item.supplier_name] = [];
@@ -169,7 +163,6 @@ export default function MonthlySupplierInventory() {
   }, {});
 
   const totalAmount = inventory.reduce((sum, item) => sum + parseFloat(item.total_amount), 0);
-  const totalQuantities = inventory.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
 
   const filteredVarieties = varieties.filter(v =>
     v.name.toLowerCase().includes(varietySearch.toLowerCase())
@@ -182,7 +175,6 @@ export default function MonthlySupplierInventory() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
 
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-3xl font-semibold text-slate-800 tracking-tight">
@@ -191,14 +183,10 @@ export default function MonthlySupplierInventory() {
             <p className="text-slate-500 mt-1 text-sm">
               Monthly tracking of supplier deliveries
             </p>
-
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center px-5 py-2.5 rounded-lg 
-bg-slate-800 text-slate-100 font-medium 
-hover:bg-slate-900 transition shadow-sm"
-
+            className="flex items-center px-5 py-2.5 rounded-lg bg-slate-800 text-slate-100 font-medium hover:bg-slate-900 transition shadow-sm"
           >
             <Plus size={18} className="mr-2" />
             Add Supply
@@ -230,7 +218,6 @@ hover:bg-slate-900 transition shadow-sm"
               )}
             </div>
 
-
             <button
               onClick={() => changeMonth(1)}
               className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -242,8 +229,6 @@ hover:bg-slate-900 transition shadow-sm"
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-
-          {/* Total Supplies */}
           <div className="bg-white rounded-xl p-6 border border-slate-200">
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -259,7 +244,6 @@ hover:bg-slate-900 transition shadow-sm"
             <p className="text-sm text-slate-500">deliveries this month</p>
           </div>
 
-          {/* Total Amount */}
           <div className="bg-white rounded-xl p-6 border border-slate-200">
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -275,7 +259,6 @@ hover:bg-slate-900 transition shadow-sm"
             <p className="text-sm text-slate-500">spent on supplies</p>
           </div>
 
-          {/* Suppliers */}
           <div className="bg-white rounded-xl p-6 border border-slate-200">
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -290,9 +273,7 @@ hover:bg-slate-900 transition shadow-sm"
             </div>
             <p className="text-sm text-slate-500">active this month</p>
           </div>
-
         </div>
-
 
         {/* Supply Form */}
         {showForm && (
@@ -302,8 +283,6 @@ hover:bg-slate-900 transition shadow-sm"
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-              {/* Supplier Name */}
               <div>
                 <label className="block mb-1 text-sm font-medium text-slate-700">
                   Supplier Name *
@@ -315,13 +294,10 @@ hover:bg-slate-900 transition shadow-sm"
                     setFormData({ ...formData, supplier_name: e.target.value })
                   }
                   placeholder="Enter supplier name"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg
-                     focus:outline-none focus:border-slate-500
-                     focus:ring-2 focus:ring-slate-400/20 transition"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-400/20 transition"
                 />
               </div>
 
-              {/* Cloth Variety */}
               <div className="relative">
                 <label className="block mb-1 text-sm font-medium text-slate-700">
                   Cloth Variety *
@@ -335,14 +311,11 @@ hover:bg-slate-900 transition shadow-sm"
                   }}
                   onFocus={() => setShowVarietyDropdown(true)}
                   placeholder="Search variety..."
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg
-                     focus:outline-none focus:border-slate-500
-                     focus:ring-2 focus:ring-slate-400/20 transition"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-400/20 transition"
                 />
 
                 {showVarietyDropdown && (
-                  <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto
-                          bg-white border border-slate-200 rounded-lg shadow-sm">
+                  <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-sm">
                     {filteredVarieties.length === 0 ? (
                       <div className="px-4 py-2 text-slate-500">
                         No varieties found
@@ -352,8 +325,7 @@ hover:bg-slate-900 transition shadow-sm"
                         <div
                           key={v.id}
                           onClick={() => handleVarietySelect(v)}
-                          className="px-4 py-2 cursor-pointer
-                             hover:bg-slate-100 transition"
+                          className="px-4 py-2 cursor-pointer hover:bg-slate-100 transition"
                         >
                           <div className="font-medium text-slate-800">
                             {v.name}
@@ -368,7 +340,6 @@ hover:bg-slate-900 transition shadow-sm"
                 )}
               </div>
 
-              {/* Quantity */}
               <div>
                 <label className="block mb-1 text-sm font-medium text-slate-700">
                   Quantity {selectedVariety && `(${selectedVariety.measurement_unit})`} *
@@ -386,13 +357,10 @@ hover:bg-slate-900 transition shadow-sm"
                       ? `Enter ${selectedVariety.measurement_unit}`
                       : 'Select variety first'
                   }
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg
-                     focus:outline-none focus:border-slate-500
-                     focus:ring-2 focus:ring-slate-400/20 transition"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-400/20 transition"
                 />
               </div>
 
-              {/* Price per Item */}
               <div>
                 <label className="block mb-1 text-sm font-medium text-slate-700">
                   Price per {selectedVariety
@@ -408,13 +376,10 @@ hover:bg-slate-900 transition shadow-sm"
                     setFormData({ ...formData, price_per_item: e.target.value })
                   }
                   placeholder="Price per unit"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg
-                     focus:outline-none focus:border-slate-500
-                     focus:ring-2 focus:ring-slate-400/20 transition"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-400/20 transition"
                 />
               </div>
 
-              {/* Supply Date */}
               <div className="md:col-span-2">
                 <label className="block mb-1 text-sm font-medium text-slate-700">
                   Supply Date *
@@ -425,13 +390,10 @@ hover:bg-slate-900 transition shadow-sm"
                   onChange={(e) =>
                     setFormData({ ...formData, supply_date: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg
-                     focus:outline-none focus:border-slate-500
-                     focus:ring-2 focus:ring-slate-400/20 transition"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-400/20 transition"
                 />
               </div>
 
-              {/* Total Amount Preview */}
               {formData.quantity && formData.price_per_item && (
                 <div className="md:col-span-2 p-4 bg-slate-100 border border-slate-200 rounded-lg">
                   <div className="flex justify-between items-center">
@@ -450,12 +412,10 @@ hover:bg-slate-900 transition shadow-sm"
                 </div>
               )}
 
-              {/* Actions */}
               <div className="md:col-span-2 flex gap-3 pt-2">
                 <button
                   onClick={handleSubmit}
-                  className="px-6 py-3 rounded-lg bg-slate-800 text-slate-100
-                     font-medium hover:bg-slate-900 transition"
+                  className="px-6 py-3 rounded-lg bg-slate-800 text-slate-100 font-medium hover:bg-slate-900 transition"
                 >
                   Add Supply & Update Stock
                 </button>
@@ -465,8 +425,7 @@ hover:bg-slate-900 transition shadow-sm"
                     setSelectedVariety(null);
                     setVarietySearch('');
                   }}
-                  className="px-6 py-3 rounded-lg border border-slate-300
-                     text-slate-700 hover:bg-slate-100 transition"
+                  className="px-6 py-3 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition"
                 >
                   Cancel
                 </button>
@@ -475,8 +434,7 @@ hover:bg-slate-900 transition shadow-sm"
           </div>
         )}
 
-
-        {/* Inventory List - Grouped by Supplier */}
+        {/* Inventory List */}
         <div className="space-y-6">
           {loading ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -492,7 +450,6 @@ hover:bg-slate-900 transition shadow-sm"
           ) : (
             Object.entries(groupedBySupplier).map(([supplier, items]) => {
               const supplierTotal = items.reduce((sum, item) => sum + parseFloat(item.total_amount), 0);
-              const supplierQty = items.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
 
               return (
                 <div key={supplier} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -516,8 +473,7 @@ hover:bg-slate-900 transition shadow-sm"
                     </div>
                   </div>
 
-
-<div className="overflow-x-auto">
+                  <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead className="bg-gray-50 text-gray-600 text-xs">
                         <tr>
@@ -533,70 +489,65 @@ hover:bg-slate-900 transition shadow-sm"
                         </tr>
                       </thead>
                       <tbody className="text-sm">
-                        {items.map((item, idx) => {
-                          return (
-                            <tr key={item.id} className={`border-t ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-indigo-50/30 transition`}>
-                              <td className="px-4 py-3 text-slate-600">
-                                {new Date(item.supply_date).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
-                              </td>
+                        {items.map((item, idx) => (
+                          <tr key={item.id} className={`border-t ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-indigo-50/30 transition`}>
+                            <td className="px-4 py-3 text-slate-600">
+                              {new Date(item.supply_date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </td>
 
-                              <td className="px-4 py-3">
-                                <div className="font-medium text-slate-800">
-                                  {item.variety.name}
-                                </div>
-                                <div className="text-xs text-slate-500 capitalize">
-                                  {item.variety.measurement_unit}
-                                </div>
-                              </td>
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-slate-800">
+                                {item.variety.name}
+                              </div>
+                              <div className="text-xs text-slate-500 capitalize">
+                                {item.variety.measurement_unit}
+                              </div>
+                            </td>
 
-                              <td className="px-4 py-3 text-center font-medium text-slate-700">
-                                {parseFloat(item.quantity).toFixed(1)}
-                              </td>
+                            <td className="px-4 py-3 text-center font-medium text-slate-700">
+                              {parseFloat(item.quantity).toFixed(1)}
+                            </td>
 
-                              <td className="px-4 py-3 text-right text-slate-700">
-                                ₹{parseFloat(item.price_per_item).toFixed(2)}
-                              </td>
+                            <td className="px-4 py-3 text-right text-slate-700">
+                              ₹{parseFloat(item.price_per_item).toFixed(2)}
+                            </td>
 
-                              <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                                ₹{parseFloat(item.total_amount).toFixed(2)}
-                              </td>
+                            <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                              ₹{parseFloat(item.total_amount).toFixed(2)}
+                            </td>
 
-                              <td className="px-4 py-3 text-center">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full
-                     text-xs font-medium bg-blue-100 text-blue-700">
-                                  {parseFloat(item.quantity_used).toFixed(1)}
-                                </span>
-                              </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                {parseFloat(item.quantity_used).toFixed(1)}
+                              </span>
+                            </td>
 
-                              <td className="px-4 py-3 text-center">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full
-                     text-xs font-medium bg-red-100 text-red-700">
-                                  {parseFloat(item.quantity_returned || 0).toFixed(1)}
-                                </span>
-                              </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                {parseFloat(item.quantity_returned || 0).toFixed(1)}
+                              </span>
+                            </td>
 
-                              <td className="px-4 py-3 text-center">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full
-                     text-xs font-medium bg-green-100 text-green-700">
-                                  {parseFloat(item.quantity_remaining).toFixed(1)}
-                                </span>
-                              </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                {parseFloat(item.quantity_remaining).toFixed(1)}
+                              </span>
+                            </td>
 
-                              <td className="px-4 py-3 text-center">
-                                <button
-                                  onClick={() => handleDelete(item.id)}
-                                  className="text-slate-400 hover:text-red-400 transition"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="text-slate-400 hover:text-red-400 transition"
+                                title="Delete"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>

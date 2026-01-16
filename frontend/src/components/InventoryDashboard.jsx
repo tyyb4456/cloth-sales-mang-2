@@ -1,7 +1,8 @@
+// frontend/src/components/InventoryDashboard.jsx - FIXED WITH AUTHENTICATION
+
 import { useState, useEffect } from 'react';
 import { Package, AlertTriangle, TrendingUp, TrendingDown, Activity } from 'lucide-react';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 export default function InventoryDashboard() {
   const [inventoryStatus, setInventoryStatus] = useState([]);
@@ -15,16 +16,14 @@ export default function InventoryDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
+      // ✅ FIXED: Using authenticated API
       const [statusRes, lowStockRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/inventory/status`),
-        fetch(`${API_BASE_URL}/inventory/low-stock`)
+        api.get('/inventory/status'),
+        api.get('/inventory/low-stock')
       ]);
       
-      const statusData = await statusRes.json();
-      const lowStockData = await lowStockRes.json();
-      
-      setInventoryStatus(Array.isArray(statusData) ? statusData : []);
-      setLowStockItems(Array.isArray(lowStockData) ? lowStockData : []);
+      setInventoryStatus(Array.isArray(statusRes.data) ? statusRes.data : []);
+      setLowStockItems(Array.isArray(lowStockRes.data) ? lowStockRes.data : []);
     } catch (error) {
       console.error('Error loading inventory:', error);
     } finally {
@@ -42,7 +41,6 @@ export default function InventoryDashboard() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header */}
         <div className="mb-6">
           <h2 className="text-3xl font-bold text-gray-800">Inventory Dashboard</h2>
           <p className="text-gray-600 mt-1">Real-time stock levels and alerts</p>
@@ -54,7 +52,6 @@ export default function InventoryDashboard() {
           </div>
         ) : (
           <>
-            {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
                 <div className="flex items-center justify-between mb-3">
@@ -113,7 +110,6 @@ export default function InventoryDashboard() {
               </div>
             </div>
 
-            {/* Low Stock Alerts */}
             {lowStockItems.length > 0 && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
                 <div className="flex items-center gap-3 mb-4">
@@ -143,7 +139,6 @@ export default function InventoryDashboard() {
               </div>
             )}
 
-            {/* All Inventory */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-xl font-bold text-gray-800">All Inventory</h3>
