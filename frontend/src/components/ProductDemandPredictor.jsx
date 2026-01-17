@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Package, TrendingUp, AlertTriangle, ShoppingCart } from 'lucide-react';
-
-const API_BASE_URL = 'http://localhost:8000';
+import api from '../api/api';  // ✅ Added
 
 const ProductDemandPredictor = () => {
   const [varieties, setVarieties] = useState([]);
@@ -17,13 +16,11 @@ const ProductDemandPredictor = () => {
 
   const loadVarieties = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/varieties/`);
-      if (response.ok) {
-        const data = await response.json();
-        setVarieties(data);
-        if (data.length > 0) {
-          setSelectedVariety(data[0].id);
-        }
+      const response = await api.get('/varieties/');  // ✅ Changed
+      const data = response.data;  // ✅ axios returns data
+      setVarieties(data);
+      if (data.length > 0) {
+        setSelectedVariety(data[0].id);
       }
     } catch (error) {
       console.error('Error loading varieties:', error);
@@ -35,13 +32,11 @@ const ProductDemandPredictor = () => {
     
     setLoading(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/predictions/product-demand/${selectedVariety}?days_ahead=${forecastDays}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setDemandForecast(data);
-      }
+      const response = await api.get(
+        `/predictions/product-demand/${selectedVariety}?days_ahead=${forecastDays}`
+      );  // ✅ Changed
+      const data = response.data;  // ✅ axios returns data
+      setDemandForecast(data);
     } catch (error) {
       console.error('Error loading demand forecast:', error);
     } finally {

@@ -1,11 +1,12 @@
+// frontend/src/components/CustomerLoanDashboard.jsx - FIXED WITH AUTHENTICATION
+
 import { useState, useEffect } from 'react';
 import {
   Search, Calendar, DollarSign, Users,
   AlertCircle, CheckCircle, Clock,
   TrendingUp, FileText, Phone, Plus
 } from 'lucide-react';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', {
@@ -28,7 +29,6 @@ export default function CustomerLoanDashboard() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
 
-
   useEffect(() => {
     loadData();
   }, [filterStatus]);
@@ -36,15 +36,16 @@ export default function CustomerLoanDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
+      // ✅ FIXED: Using authenticated API
       const [loansRes, summaryRes, customerSummaryRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/loans/${filterStatus !== 'all' ? `?status=${filterStatus}` : ''}`),
-        fetch(`${API_BASE_URL}/loans/summary/status`),
-        fetch(`${API_BASE_URL}/loans/summary/customers`)
+        api.get(`/loans/${filterStatus !== 'all' ? `?status=${filterStatus}` : ''}`),
+        api.get('/loans/summary/status'),
+        api.get('/loans/summary/customers')
       ]);
 
-      const loansData = await loansRes.json();
-      const summaryData = await summaryRes.json();
-      const customerSummaryData = await customerSummaryRes.json();
+      const loansData = loansRes.data;
+      const summaryData = summaryRes.data;
+      const customerSummaryData = customerSummaryRes.data;
 
       setLoans(Array.isArray(loansData) ? loansData : []);
       setSummary(summaryData);
@@ -64,8 +65,9 @@ export default function CustomerLoanDashboard() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/loans/search/${searchTerm}`);
-      const data = await response.json();
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get(`/loans/search/${searchTerm}`);
+      const data = response.data;
       setLoans(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error searching loans:', error);
@@ -88,31 +90,59 @@ export default function CustomerLoanDashboard() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/loans/${selectedLoan.id}/payments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          payment_amount: amount,
-          payment_date: new Date().toISOString().split('T')[0],
-          payment_method: paymentMethod,
-          notes: paymentNotes
-        })
+      // ✅ FIXED: Using authenticated API
+      const response = await api.post(`/loans/${selectedLoan.id}/payments`, {
+        payment_amount: amount,
+        payment_date: new Date().toISOString().split('T')[0],
+        payment_method: paymentMethod,
+        notes: paymentNotes
       });
 
-      if (response.ok) {
+      if (response.status === 200 || response.status === 201) {
         alert('Payment recorded successfully!');
         setShowPaymentModal(false);
         setPaymentAmount('');
         setPaymentNotes('');
         setSelectedLoan(null);
         loadData();
-      } else {
-        const error = await response.json();
-        alert(error.detail || 'Failed to record payment');
       }
     } catch (error) {
       console.error('Error recording payment:', error);
-      alert('Failed to record payment');
+      alert(error.response?.data?.detail || 'Failed to record payment');
+    }
+  };
+
+  const handleDeleteLoan = async (loan) => {
+    const confirmMsg = `⚠️ WARNING: This will permanently delete:
+
+- Loan for customer: ${loan.customer_name}
+- Loan amount: ₹${parseFloat(loan.total_loan_amount).toLocaleString()}
+- All payment history
+- Associated sale record
+
+This action CANNOT be undone!
+
+Are you sure you want to delete this loan?`;
+
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // ✅ FIXED: Using authenticated API
+      const response = await api.delete(`/loans/${loan.id}`);
+
+      if (response.status === 200 || response.status === 204) {
+        alert('✅ Loan deleted successfully!');
+        loadData();
+      }
+    } catch (error) {
+      console.error('Error deleting loan:', error);
+      alert(error.response?.data?.detail || '❌ Failed to delete loan. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -141,43 +171,6 @@ export default function CustomerLoanDashboard() {
       </div>
     );
   }
-  const handleDeleteLoan = async (loan) => {
-    const confirmMsg = `⚠️ WARNING: This will permanently delete:
-
-- Loan for customer: ${loan.customer_name}
-- Loan amount: ₹${parseFloat(loan.total_loan_amount).toLocaleString()}
-- All payment history
-- Associated sale record
-
-This action CANNOT be undone!
-
-Are you sure you want to delete this loan?`;
-
-    if (!window.confirm(confirmMsg)) {
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/loans/${loan.id}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok || response.status === 204) {
-        alert('✅ Loan deleted successfully!');
-        loadData(); // Reload all data
-      } else {
-        const error = await response.json();
-        alert(error.detail || 'Failed to delete loan');
-      }
-    } catch (error) {
-      console.error('Error deleting loan:', error);
-      alert('❌ Failed to delete loan. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -367,7 +360,6 @@ Are you sure you want to delete this loan?`;
                             </button>
                           )}
 
-                          {/* 🆕 ADD DELETE BUTTON */}
                           <button
                             onClick={() => handleDeleteLoan(loan)}
                             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium flex items-center gap-1"
@@ -513,13 +505,11 @@ Are you sure you want to delete this loan?`;
                     Cancel
                   </button>
                 </div>
-
               </div>
             </div>
           </div>
         )}
       </div>
     </div>
-
   );
 }

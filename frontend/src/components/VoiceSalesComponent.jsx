@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Plus, Calendar, Trash2, Loader, AlertCircle, CheckCircle, Volume2, StopCircle } from 'lucide-react';
+import api from '../api/api';  // ✅ Added
 
 // Helper function to format quantity with unit
 const formatQuantityWithUnit = (quantity, unit) => {
@@ -46,8 +47,6 @@ const VoiceSalesComponent = () => {
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
 
-  const API_BASE_URL = 'http://127.0.0.1:8000';
-
   useEffect(() => {
     loadVarieties();
     loadSales();
@@ -55,8 +54,8 @@ const VoiceSalesComponent = () => {
 
   const loadVarieties = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/varieties/`);
-      const data = await response.json();
+      const response = await api.get('/varieties/');  // ✅ Changed
+      const data = response.data;  // ✅ axios returns data
       setVarieties(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading varieties:', error);
@@ -66,8 +65,8 @@ const VoiceSalesComponent = () => {
   const loadSales = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/sales/date/${selectedDate}`);
-      const data = await response.json();
+      const response = await api.get(`/sales/date/${selectedDate}`);  // ✅ Changed
+      const data = response.data;  // ✅ axios returns data
       setSales(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading sales:', error);
@@ -79,7 +78,7 @@ const VoiceSalesComponent = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this sale?')) return;
     try {
-      await fetch(`${API_BASE_URL}/sales/${id}`, { method: 'DELETE' });
+      await api.delete(`/sales/${id}`);  // ✅ Changed
       loadSales();
       setSuccessMessage('Sale deleted successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -142,33 +141,20 @@ const VoiceSalesComponent = () => {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
 
-      const transcribeResponse = await fetch(`${API_BASE_URL}/sales/voice/transcribe`, {
-        method: 'POST',
-        body: formData,
+      const transcribeResponse = await api.post('/sales/voice/transcribe', formData, {  // ✅ Changed
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      if (!transcribeResponse.ok) {
-        throw new Error('Failed to transcribe audio');
-      }
-
-      const transcribeData = await transcribeResponse.json();
+      const transcribeData = transcribeResponse.data;  // ✅ axios returns data
       setTranscript(transcribeData.transcript);
 
       // Step 2: Send transcript to backend for AI validation and parsing
-      const validateResponse = await fetch(`${API_BASE_URL}/sales/voice/validate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          transcript: transcribeData.transcript,
-          varieties: varieties 
-        }),
+      const validateResponse = await api.post('/sales/voice/validate', {  // ✅ Changed
+        transcript: transcribeData.transcript,
+        varieties: varieties
       });
 
-      if (!validateResponse.ok) {
-        throw new Error('Failed to validate voice command');
-      }
-
-      const validationData = await validateResponse.json();
+      const validationData = validateResponse.data;  // ✅ axios returns data
       
       if (!validationData.success) {
         setError(validationData.message || 'Failed to understand command');
@@ -191,16 +177,7 @@ const VoiceSalesComponent = () => {
 
     setIsProcessing(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/sales/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(validationResult.sale_data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to record sale');
-      }
+      const response = await api.post('/sales/', validationResult.sale_data);  // ✅ Changed
 
       setSuccessMessage('Sale recorded successfully via voice command! 🎉');
       setTranscript('');
@@ -209,7 +186,7 @@ const VoiceSalesComponent = () => {
       
       setTimeout(() => setSuccessMessage(''), 5000);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.detail || err.message || 'Failed to record sale');  // ✅ Updated error handling
     } finally {
       setIsProcessing(false);
     }

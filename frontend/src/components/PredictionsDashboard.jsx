@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { TrendingUp, TrendingDown, AlertCircle, Zap, Package, ShoppingCart, Lightbulb, Calendar, Target, Award } from 'lucide-react';
-
-const API_BASE_URL = 'http://localhost:8000';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 const PredictionsDashboard = () => {
   const [forecastData, setForecastData] = useState(null);
@@ -22,28 +21,19 @@ const PredictionsDashboard = () => {
     setError(null);
     
     try {
+      // ✅ FIXED: Using authenticated API
       const [forecastRes, trendsRes, insightsRes, reorderRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/predictions/revenue-forecast?days_ahead=${forecastDays}`),
-        fetch(`${API_BASE_URL}/predictions/sales-trends?days=30`),
-        fetch(`${API_BASE_URL}/predictions/smart-insights?days=30`),
-        fetch(`${API_BASE_URL}/predictions/reorder-recommendations`)
+        api.get(`/predictions/revenue-forecast?days_ahead=${forecastDays}`),
+        api.get('/predictions/sales-trends?days=30'),
+        api.get('/predictions/smart-insights?days=30'),
+        api.get('/predictions/reorder-recommendations')
       ]);
 
-      if (!forecastRes.ok || !trendsRes.ok || !insightsRes.ok || !reorderRes.ok) {
-        throw new Error('Failed to fetch predictions');
-      }
-
-      const [forecast, trends, insights, reorder] = await Promise.all([
-        forecastRes.json(),
-        trendsRes.json(),
-        insightsRes.json(),
-        reorderRes.json()
-      ]);
-
-      setForecastData(forecast);
-      setTrends(trends);
-      setInsights(insights);
-      setReorderRecs(reorder);
+      // ✅ FIXED: Access data from response.data
+      setForecastData(forecastRes.data);
+      setTrends(trendsRes.data);
+      setInsights(insightsRes.data);
+      setReorderRecs(reorderRes.data);
     } catch (err) {
       setError('Failed to load predictions. Ensure you have sufficient historical data.');
       console.error(err);

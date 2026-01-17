@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, AlertCircle, Calendar, ArrowUp, ArrowDown, Activity } from 'lucide-react';
+import api from '../api/api'; 
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
@@ -40,8 +41,8 @@ const FinancialDashboard = () => {
       const monthlyReports = await Promise.all(
         months.map(async (m) => {
           try {
-            const response = await fetch(`${API_BASE_URL}/expenses/financial-report/${m.year}/${m.month}`);
-            const data = await response.json();
+            const response = await api.get(`/expenses/financial-report/${m.year}/${m.month}`);
+            const data = response.data;
             return { ...data, label: m.label };
           } catch (error) {
             return {
@@ -60,9 +61,9 @@ const FinancialDashboard = () => {
       // Get expense breakdown for current month
       const currentMonth = new Date();
       const expensesResponse = await fetch(
-        `${API_BASE_URL}/expenses/month/${currentMonth.getFullYear()}/${currentMonth.getMonth() + 1}`
+        `/expenses/month/${currentMonth.getFullYear()}/${currentMonth.getMonth() + 1}`
       );
-      const expenses = await expensesResponse.json();
+      const expenses = expensesResponse.data;
 
       // Calculate expense breakdown by category
       const categoryMap = (expenses || []).reduce((acc, expense) => {

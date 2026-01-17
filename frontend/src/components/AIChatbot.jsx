@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, Loader2, X, Lightbulb, Sparkles, Bot, User } from 'lucide-react';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 // Component to format markdown-style text
 const FormattedMessage = ({ content, isUser }) => {
@@ -111,14 +110,23 @@ const AIChatbot = () => {
 
   const loadInitialData = async () => {
     try {
-      // Try to load stats and questions
-      const statsRes = await fetch(`${API_BASE_URL}/chatbot/quick-stats`)
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null);
+      // ✅ FIXED: Using authenticated API
+      let statsRes = null;
+      let questionsRes = null;
 
-      const questionsRes = await fetch(`${API_BASE_URL}/chatbot/suggested-questions`)
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null);
+      try {
+        const statsResponse = await api.get('/chatbot/quick-stats');
+        statsRes = statsResponse.data;
+      } catch (error) {
+        console.log('Could not load stats:', error);
+      }
+
+      try {
+        const questionsResponse = await api.get('/chatbot/suggested-questions');
+        questionsRes = questionsResponse.data;
+      } catch (error) {
+        console.log('Could not load questions:', error);
+      }
 
       if (statsRes) {
         setQuickStats(statsRes);
@@ -164,20 +172,13 @@ const AIChatbot = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/chatbot/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: textToSend,
-          conversation_history: messages
-        })
+      // ✅ FIXED: Using authenticated API
+      const response = await api.post('/chatbot/chat', {
+        message: textToSend,
+        conversation_history: messages
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       const aiMessage = {
         role: 'assistant',
@@ -229,7 +230,7 @@ const AIChatbot = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-105 h-150 bg-white rounded-2xl shadow-2xl 
+        <div className="fixed bottom-6 right-6 w-96 h-150 bg-white rounded-2xl shadow-2xl 
                         flex flex-col z-50 border border-gray-200 overflow-hidden">
           {/* Header */}
           <div className="bg-linear-to-r from-slate-700 to-slate-800 text-white p-4 flex items-center justify-between">
@@ -275,8 +276,7 @@ const AIChatbot = () => {
                     ? 'bg-linear-to-br from-slate-500 to-slate-600'
                     : 'bg-linear-to-br from-gray-700 to-gray-900'
                     }`}>
-                    {message.role === 'user' ? <User size={16} className="bg-linear-to-br from-slate-600 to-slate-700
- text-white" /> : <Bot size={16} className="text-white" />}
+                    {message.role === 'user' ? <User size={16} className="text-white" /> : <Bot size={16} className="text-white" />}
                   </div>
 
                   {/* Message Bubble */}
@@ -342,39 +342,33 @@ const AIChatbot = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Stats Bar - Only show if data is available */}
-{quickStats && quickStats.today && (
-  <div className="border-t border-gray-200 bg-white p-3">
-    <div className="grid grid-cols-3 gap-2 text-center">
-      
-      {/* Revenue */}
-      <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
-        <p className="text-xs text-gray-600 font-medium">Revenue</p>
-        <p className="text-sm font-bold text-slate-700">
-          ₹{quickStats.today.revenue.toLocaleString()}
-        </p>
-      </div>
+          {/* Quick Stats Bar */}
+          {quickStats && quickStats.today && (
+            <div className="border-t border-gray-200 bg-white p-3">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                  <p className="text-xs text-gray-600 font-medium">Revenue</p>
+                  <p className="text-sm font-bold text-slate-700">
+                    ₹{quickStats.today.revenue.toLocaleString()}
+                  </p>
+                </div>
 
-      {/* Profit */}
-      <div className="bg-teal-50 rounded-lg p-2 border border-teal-200">
-        <p className="text-xs text-gray-600 font-medium">Profit</p>
-        <p className="text-sm font-bold text-teal-700">
-          ₹{quickStats.today.profit.toLocaleString()}
-        </p>
-      </div>
+                <div className="bg-teal-50 rounded-lg p-2 border border-teal-200">
+                  <p className="text-xs text-gray-600 font-medium">Profit</p>
+                  <p className="text-sm font-bold text-teal-700">
+                    ₹{quickStats.today.profit.toLocaleString()}
+                  </p>
+                </div>
 
-      {/* Orders */}
-      <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
-        <p className="text-xs text-gray-600 font-medium">Orders</p>
-        <p className="text-sm font-bold text-gray-700">
-          {quickStats.today.transactions}
-        </p>
-      </div>
-
-    </div>
-  </div>
-)}
-
+                <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
+                  <p className="text-xs text-gray-600 font-medium">Orders</p>
+                  <p className="text-sm font-bold text-gray-700">
+                    {quickStats.today.transactions}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Input Area */}
           <div className="border-t border-gray-200 bg-white p-4">
@@ -390,22 +384,21 @@ const AIChatbot = () => {
                          focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
                          disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               />
-<button
-  onClick={() => handleSendMessage()}
-  disabled={!inputMessage.trim() || isLoading}
-  className="p-3 bg-linear-to-br from-slate-600 to-slate-700 text-white rounded-xl
-             hover:from-slate-700 hover:to-slate-800 transition-all duration-200
-             disabled:opacity-50 disabled:cursor-not-allowed
-             disabled:hover:from-slate-600 disabled:hover:to-slate-700
-             hover:shadow-md hover:scale-105 active:scale-95"
->
-  {isLoading ? (
-    <Loader2 size={20} className="animate-spin" />
-  ) : (
-    <Send size={20} />
-  )}
-</button>
-
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={!inputMessage.trim() || isLoading}
+                className="p-3 bg-linear-to-br from-slate-600 to-slate-700 text-white rounded-xl
+                         hover:from-slate-700 hover:to-slate-800 transition-all duration-200
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         disabled:hover:from-slate-600 disabled:hover:to-slate-700
+                         hover:shadow-md hover:scale-105 active:scale-95"
+              >
+                {isLoading ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <Send size={20} />
+                )}
+              </button>
             </div>
             <p className="text-xs text-gray-400 mt-2 text-center">
               Powered by AI • Real-time business insights

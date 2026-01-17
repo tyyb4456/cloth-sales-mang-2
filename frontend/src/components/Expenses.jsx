@@ -1,22 +1,9 @@
+// frontend/src/components/Expenses.jsx - FIXED WITH AUTHENTICATION
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Calendar, TrendingDown, DollarSign, AlertCircle, PieChart, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 import { format } from 'date-fns';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// API Functions
-const getExpensesByMonth = (year, month) => api.get(`/expenses/month/${year}/${month}`);
-const createExpense = (data) => api.post('/expenses/', data);
-const deleteExpense = (id) => api.delete(`/expenses/${id}`);
-const getFinancialReport = (date) => api.get(`/expenses/financial-report/${date}`);
 
 const ExpenseTracker = () => {
   const [expenses, setExpenses] = useState([]);
@@ -53,7 +40,8 @@ const ExpenseTracker = () => {
     setLoading(true);
     try {
       const [year, month] = selectedDate.split('-');
-      const response = await getExpensesByMonth(parseInt(year), parseInt(month));
+      // ✅ FIXED: Using authenticated API
+      const response = await api.get(`/expenses/month/${parseInt(year)}/${parseInt(month)}`);
       setExpenses(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading expenses:', error);
@@ -67,6 +55,7 @@ const ExpenseTracker = () => {
   const loadFinancialReport = async () => {
     try {
       const [year, month] = selectedDate.split('-');
+      // ✅ FIXED: Using authenticated API
       const response = await api.get(`/expenses/financial-report/${parseInt(year)}/${parseInt(month)}`);
       setFinancialReport(response.data);
     } catch (error) {
@@ -82,7 +71,8 @@ const ExpenseTracker = () => {
     }
     
     try {
-      await createExpense({
+      // ✅ FIXED: Using authenticated API
+      await api.post('/expenses/', {
         ...formData,
         amount: parseFloat(formData.amount)
       });
@@ -107,7 +97,8 @@ const ExpenseTracker = () => {
     if (!window.confirm('Delete this expense?')) return;
     
     try {
-      await deleteExpense(id);
+      // ✅ FIXED: Using authenticated API
+      await api.delete(`/expenses/${id}`);
       loadExpenses();
       loadFinancialReport();
       alert('Expense deleted successfully!');
@@ -151,7 +142,6 @@ const ExpenseTracker = () => {
           </button>
         </div>
 
-
         {/* Month Filter */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-200">
           <div className="flex items-center gap-3">
@@ -165,6 +155,51 @@ const ExpenseTracker = () => {
             />
           </div>
         </div>
+
+        {/* Financial Summary Cards */}
+        {financialReport && (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingDown className="w-5 h-5 text-blue-600" />
+                <p className="text-xs font-medium text-gray-600">Revenue</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">₹{(totalRevenue / 1000).toFixed(1)}K</p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="w-5 h-5 text-green-600" />
+                <p className="text-xs font-medium text-gray-600">Profit</p>
+              </div>
+              <p className="text-2xl font-bold text-green-700">₹{(totalProfit / 1000).toFixed(1)}K</p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <p className="text-xs font-medium text-gray-600">Expenses</p>
+              </div>
+              <p className="text-2xl font-bold text-red-700">₹{(totalExpenses / 1000).toFixed(1)}K</p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingDown className="w-5 h-5 text-purple-600" />
+                <p className="text-xs font-medium text-gray-600">Net Income</p>
+              </div>
+              <p className="text-2xl font-bold text-purple-700">₹{(netIncome / 1000).toFixed(1)}K</p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <PieChart className="w-5 h-5 text-orange-600" />
+                <p className="text-xs font-medium text-gray-600">Profit Margin</p>
+              </div>
+              <p className="text-2xl font-bold text-orange-700">{profitMargin.toFixed(1)}%</p>
+            </div>
+          </div>
+        )}
 
         {/* Add Expense Form */}
         {showForm && (

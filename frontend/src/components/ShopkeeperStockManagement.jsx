@@ -4,8 +4,7 @@ import {
   CheckCircle, Clock, User, ArrowRightLeft, RotateCcw,
   AlertCircle, ChevronDown, ChevronUp, AlertTriangle, Search
 } from 'lucide-react';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import api from '../api/api';  // ✅ Added
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -61,8 +60,8 @@ const ShopkeeperStockManagement = () => {
 
   const loadVarieties = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/varieties/`);
-      const data = await response.json();
+      const response = await api.get('/varieties/');  // ✅ Changed
+      const data = response.data;  // ✅ axios returns data
       setVarieties(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading varieties:', error);
@@ -72,8 +71,8 @@ const ShopkeeperStockManagement = () => {
   const loadIssuedStock = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/shopkeeper-stock/`);
-      const data = await response.json();
+      const response = await api.get('/shopkeeper-stock/');  // ✅ Changed
+      const data = response.data;  // ✅ axios returns data
       setIssuedStock(Array.isArray(data) ? data : []);
 
       const uniqueShopkeepers = [...new Set(data.map(item => item.shopkeeper_name))];
@@ -87,8 +86,8 @@ const ShopkeeperStockManagement = () => {
 
   const loadSupplierInventories = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/supplier/inventory`);
-      const data = await response.json();
+      const response = await api.get('/supplier/inventory');  // ✅ Changed
+      const data = response.data;  // ✅ axios returns data
       setSupplierInventories(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading supplier inventories:', error);
@@ -137,20 +136,11 @@ const ShopkeeperStockManagement = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/shopkeeper-stock/issue`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...issueFormData,
-          variety_id: parseInt(issueFormData.variety_id),
-          quantity_issued: parseFloat(issueFormData.quantity_issued)
-        })
+      const response = await api.post('/shopkeeper-stock/issue', {  // ✅ Changed
+        ...issueFormData,
+        variety_id: parseInt(issueFormData.variety_id),
+        quantity_issued: parseFloat(issueFormData.quantity_issued)
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to issue stock');
-      }
 
       alert('Stock issued successfully! Inventory deducted.');
       setShowIssueForm(false);
@@ -168,7 +158,7 @@ const ShopkeeperStockManagement = () => {
       loadIssuedStock();
       loadVarieties(); // Reload to get updated stock levels
     } catch (error) {
-      alert(error.message);
+      alert(error.response?.data?.detail || error.message || 'Failed to issue stock');  // ✅ Updated error handling
     }
   };
 
@@ -181,19 +171,10 @@ const ShopkeeperStockManagement = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/shopkeeper-stock/${selectedRecord.id}/sales`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...salesFormData,
-          quantity_sold: parseFloat(salesFormData.quantity_sold)
-        })
+      const response = await api.post(`/shopkeeper-stock/${selectedRecord.id}/sales`, {  // ✅ Changed
+        ...salesFormData,
+        quantity_sold: parseFloat(salesFormData.quantity_sold)
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to record sales');
-      }
 
       alert('Sales recorded successfully!');
       setShowSalesForm(false);
@@ -205,7 +186,7 @@ const ShopkeeperStockManagement = () => {
       setSelectedRecord(null);
       loadIssuedStock();
     } catch (error) {
-      alert(error.message);
+      alert(error.response?.data?.detail || error.message || 'Failed to record sales');  // ✅ Updated error handling
     }
   };
 
@@ -218,19 +199,10 @@ const ShopkeeperStockManagement = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/shopkeeper-stock/${selectedRecord.id}/return`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...returnFormData,
-          quantity_returned: parseFloat(returnFormData.quantity_returned)
-        })
+      const response = await api.post(`/shopkeeper-stock/${selectedRecord.id}/return`, {  // ✅ Changed
+        ...returnFormData,
+        quantity_returned: parseFloat(returnFormData.quantity_returned)
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to record return');
-      }
 
       alert('Return recorded successfully! Inventory restored.');
       setShowReturnForm(false);
@@ -243,7 +215,7 @@ const ShopkeeperStockManagement = () => {
       loadIssuedStock();
       loadVarieties(); // Reload to get updated stock levels
     } catch (error) {
-      alert(error.message);
+      alert(error.response?.data?.detail || error.message || 'Failed to record return');  // ✅ Updated error handling
     }
   };
 
@@ -273,14 +245,7 @@ const ShopkeeperStockManagement = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/shopkeeper-stock/${record.id}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to delete');
-      }
+      const response = await api.delete(`/shopkeeper-stock/${record.id}`);  // ✅ Changed
 
       alert('Record deleted successfully!\n\n' +
         (parseFloat(record.quantity_remaining) > 0
@@ -289,7 +254,7 @@ const ShopkeeperStockManagement = () => {
       loadIssuedStock();
       loadVarieties(); // Reload to get updated stock levels
     } catch (error) {
-      alert(`❌ Error: ${error.message}`);
+      alert(`❌ Error: ${error.response?.data?.detail || error.message}`);  // ✅ Updated error handling
     }
   };
 
@@ -313,7 +278,6 @@ const ShopkeeperStockManagement = () => {
   const totalSold = filteredStock.reduce((sum, item) => sum + parseFloat(item.quantity_sold), 0);
   const totalReturned = filteredStock.reduce((sum, item) => sum + parseFloat(item.quantity_returned), 0);
   const totalRemaining = filteredStock.reduce((sum, item) => sum + parseFloat(item.quantity_remaining), 0);
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
