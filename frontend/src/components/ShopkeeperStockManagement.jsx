@@ -38,7 +38,7 @@ const ShopkeeperStockManagement = () => {
     quantity_issued: '',
     issue_date: formatDate(new Date()),
     notes: '',
-    deduct_from_inventory: true
+    deducted_from_inventory: true
   });
 
   const [returnFormData, setReturnFormData] = useState({
@@ -151,7 +151,7 @@ const ShopkeeperStockManagement = () => {
         quantity_issued: '',
         issue_date: formatDate(new Date()),
         notes: '',
-        deduct_from_inventory: true
+        deducted_from_inventory: true
       });
       setSelectedVariety(null);
       setVarietySearch('');

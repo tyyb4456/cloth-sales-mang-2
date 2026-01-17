@@ -44,8 +44,8 @@ def issue_stock_to_shopkeeper(
     
     quantity_decimal = Decimal(str(stock.quantity_issued))
     
-    # Check stock if deduct_from_inventory is True
-    if stock.deduct_from_inventory:
+    # Check stock if deducted_from_inventory is True
+    if stock.deducted_from_inventory:
         if variety.current_stock < quantity_decimal:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -55,7 +55,7 @@ def issue_stock_to_shopkeeper(
     # Find supplier inventory to deduct from (FIFO) - TENANT FILTERED
     supplier_inventory_id = None
     
-    if stock.deduct_from_inventory:
+    if stock.deducted_from_inventory:
         # 🆕 Find oldest supplier inventory WITH TENANT FILTER
         supplier_inventory = db.query(SupplierInventory).filter(
             SupplierInventory.variety_id == stock.variety_id,
@@ -93,7 +93,7 @@ def issue_stock_to_shopkeeper(
         quantity_remaining=quantity_decimal,
         issue_date=stock.issue_date,
         notes=stock.notes,
-        deducted_from_inventory=stock.deduct_from_inventory,
+        deducted_from_inventory=stock.deducted_from_inventory,
         supplier_inventory_id=supplier_inventory_id
     )
     
@@ -101,7 +101,7 @@ def issue_stock_to_shopkeeper(
     db.flush()  # Get the ID
     
     # ONLY deduct from variety stock if flag is True
-    if stock.deduct_from_inventory:
+    if stock.deducted_from_inventory:
         variety.current_stock -= quantity_decimal
         
         # Log inventory movement
