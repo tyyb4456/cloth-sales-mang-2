@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Plus, Trash2, Calendar, Package, TrendingDown,
-  CheckCircle, Clock, User, ArrowRightLeft, RotateCcw,
+  Plus, Trash2, Package, TrendingDown,
+  CheckCircle, Clock, User, RotateCcw,
   AlertCircle, ChevronDown, ChevronUp, AlertTriangle, Search
 } from 'lucide-react';
-import api from '../api/api';  // ✅ Added
+import api from '../api/api';
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -25,7 +25,7 @@ const ShopkeeperStockManagement = () => {
   const [showSalesForm, setShowSalesForm] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
 
-  // 🆕 NEW: Variety search states
+  // Variety search states
   const [varietySearch, setVarietySearch] = useState('');
   const [showVarietyDropdown, setShowVarietyDropdown] = useState(false);
   const [selectedVariety, setSelectedVariety] = useState(null);
@@ -56,13 +56,13 @@ const ShopkeeperStockManagement = () => {
   useEffect(() => {
     loadVarieties();
     loadIssuedStock();
+    loadSupplierInventories();
   }, []);
 
   const loadVarieties = async () => {
     try {
-      const response = await api.get('/varieties/');  // ✅ Changed
-      const data = response.data;  // ✅ axios returns data
-      setVarieties(Array.isArray(data) ? data : []);
+      const response = await api.get('/varieties/');
+      setVarieties(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading varieties:', error);
     }
@@ -71,8 +71,8 @@ const ShopkeeperStockManagement = () => {
   const loadIssuedStock = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/shopkeeper-stock/');  // ✅ Changed
-      const data = response.data;  // ✅ axios returns data
+      const response = await api.get('/shopkeeper-stock/');
+      const data = response.data;
       setIssuedStock(Array.isArray(data) ? data : []);
 
       const uniqueShopkeepers = [...new Set(data.map(item => item.shopkeeper_name))];
@@ -86,43 +86,37 @@ const ShopkeeperStockManagement = () => {
 
   const loadSupplierInventories = async () => {
     try {
-      const response = await api.get('/supplier/inventory');  // ✅ Changed
-      const data = response.data;  // ✅ axios returns data
-      setSupplierInventories(Array.isArray(data) ? data : []);
+      const response = await api.get('/supplier/inventory');
+      setSupplierInventories(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading supplier inventories:', error);
     }
   };
 
-  // Call it in useEffect
-  useEffect(() => {
-    loadVarieties();
-    loadIssuedStock();
-    loadSupplierInventories(); // ✅ ADD THIS
-  }, []);
-
-  // Add this helper function to calculate real available stock
+  // ✅ FIXED: Calculate real available stock from supplier inventory
   const getAvailableStock = (varietyId) => {
     if (!varietyId) return 0;
-
+    
     const total = supplierInventories
       .filter(inv => inv.variety_id === varietyId)
       .reduce((sum, inv) => sum + parseFloat(inv.quantity_remaining || 0), 0);
-
+    
     return total;
   };
 
-  // Update the handleVarietySelect function
   const handleVarietySelect = (variety) => {
+    const availableStock = getAvailableStock(variety.id);
+    
     setSelectedVariety({
       ...variety,
-      available_stock: getAvailableStock(variety.id) // ✅ Add calculated stock
+      available_stock: availableStock
     });
+    
     setVarietySearch(variety.name);
     setIssueFormData({ ...issueFormData, variety_id: variety.id });
     setShowVarietyDropdown(false);
   };
-  // 🆕 NEW: Filter varieties based on search
+
   const filteredVarieties = varieties.filter(v =>
     v.name.toLowerCase().includes(varietySearch.toLowerCase())
   );
@@ -135,14 +129,28 @@ const ShopkeeperStockManagement = () => {
       return;
     }
 
+    // ✅ FIXED: Only validate stock if deducting from inventory
+    if (issueFormData.deducted_from_inventory) {
+      const availableStock = getAvailableStock(issueFormData.variety_id);
+      if (parseFloat(issueFormData.quantity_issued) > availableStock) {
+        alert(`Insufficient stock! Only ${availableStock} available in inventory.`);
+        return;
+      }
+    }
+
     try {
-      const response = await api.post('/shopkeeper-stock/issue', {  // ✅ Changed
+      await api.post('/shopkeeper-stock/issue', {
         ...issueFormData,
         variety_id: parseInt(issueFormData.variety_id),
         quantity_issued: parseFloat(issueFormData.quantity_issued)
       });
 
-      alert('Stock issued successfully! Inventory deducted.');
+      const message = issueFormData.deducted_from_inventory
+        ? 'Stock issued successfully! Inventory deducted.'
+        : 'Stock issued successfully! (Old stock - not deducted from inventory)';
+      
+      alert(message);
+      
       setShowIssueForm(false);
       setIssueFormData({
         shopkeeper_name: '',
@@ -155,10 +163,12 @@ const ShopkeeperStockManagement = () => {
       });
       setSelectedVariety(null);
       setVarietySearch('');
+      
       loadIssuedStock();
-      loadVarieties(); // Reload to get updated stock levels
+      loadVarieties();
+      loadSupplierInventories();
     } catch (error) {
-      alert(error.response?.data?.detail || error.message || 'Failed to issue stock');  // ✅ Updated error handling
+      alert(error.response?.data?.detail || error.message || 'Failed to issue stock');
     }
   };
 
@@ -171,7 +181,7 @@ const ShopkeeperStockManagement = () => {
     }
 
     try {
-      const response = await api.post(`/shopkeeper-stock/${selectedRecord.id}/sales`, {  // ✅ Changed
+      await api.post(`/shopkeeper-stock/${selectedRecord.id}/sales`, {
         ...salesFormData,
         quantity_sold: parseFloat(salesFormData.quantity_sold)
       });
@@ -186,7 +196,7 @@ const ShopkeeperStockManagement = () => {
       setSelectedRecord(null);
       loadIssuedStock();
     } catch (error) {
-      alert(error.response?.data?.detail || error.message || 'Failed to record sales');  // ✅ Updated error handling
+      alert(error.response?.data?.detail || error.message || 'Failed to record sales');
     }
   };
 
@@ -199,12 +209,17 @@ const ShopkeeperStockManagement = () => {
     }
 
     try {
-      const response = await api.post(`/shopkeeper-stock/${selectedRecord.id}/return`, {  // ✅ Changed
+      await api.post(`/shopkeeper-stock/${selectedRecord.id}/return`, {
         ...returnFormData,
         quantity_returned: parseFloat(returnFormData.quantity_returned)
       });
 
-      alert('Return recorded successfully! Inventory restored.');
+      const message = selectedRecord.deducted_from_inventory
+        ? 'Return recorded successfully! Inventory restored.'
+        : 'Return recorded successfully!';
+      
+      alert(message);
+      
       setShowReturnForm(false);
       setReturnFormData({
         quantity_returned: '',
@@ -212,49 +227,78 @@ const ShopkeeperStockManagement = () => {
         notes: ''
       });
       setSelectedRecord(null);
+      
       loadIssuedStock();
-      loadVarieties(); // Reload to get updated stock levels
+      loadVarieties();
+      loadSupplierInventories();
     } catch (error) {
-      alert(error.response?.data?.detail || error.message || 'Failed to record return');  // ✅ Updated error handling
+      alert(error.response?.data?.detail || error.message || 'Failed to record return');
     }
   };
 
   const handleDelete = async (record) => {
     const hasSales = parseFloat(record.quantity_sold) > 0;
     const hasReturns = parseFloat(record.quantity_returned) > 0;
+    const issuedQty = parseFloat(record.quantity_issued);
+    const returnedQty = parseFloat(record.quantity_returned);
+    const netRestore = issuedQty - returnedQty; // What will actually be restored
 
-    let confirmMessage = `⚠️ Delete Stock Record?\n\n`;
+    let confirmMessage = `⚠️ Delete Entire Transaction?\n\n`;
     confirmMessage += `Shopkeeper: ${record.shopkeeper_name}\n`;
     confirmMessage += `Variety: ${record.variety.name}\n`;
-    confirmMessage += `Issued: ${record.quantity_issued}\n`;
-
+    confirmMessage += `Originally Issued: ${issuedQty}\n`;
+    
     if (hasSales || hasReturns) {
-      confirmMessage += `\n⚠️ WARNING: This record has transactions:\n`;
+      confirmMessage += `\n📊 Transaction Summary:\n`;
       if (hasSales) confirmMessage += `• Sold: ${record.quantity_sold}\n`;
-      if (hasReturns) confirmMessage += `• Returned: ${record.quantity_returned}\n`;
+      if (hasReturns) confirmMessage += `• Already Returned: ${record.quantity_returned} (already in inventory)\n`;
+      confirmMessage += `• Still with shopkeeper: ${record.quantity_remaining}\n`;
+    }
+    
+    if (record.deducted_from_inventory) {
+      confirmMessage += `\n✅ INVENTORY IMPACT:\n`;
+      confirmMessage += `Net restoration: ${netRestore} units\n`;
+      confirmMessage += `(${issuedQty} issued - ${returnedQty} already returned)\n`;
+    } else {
+      confirmMessage += `\n⚠️ OLD STOCK:\n`;
+      confirmMessage += `No inventory restoration (wasn't deducted originally)\n`;
     }
 
-    if (parseFloat(record.quantity_remaining) > 0) {
-      confirmMessage += `\nRemaining stock (${record.quantity_remaining}) will be restored to inventory.`;
-    }
-
-    confirmMessage += `\n\nThis action cannot be undone. Continue?`;
+    confirmMessage += `\n⚠️ This will permanently delete:\n`;
+    confirmMessage += `• The issuance record\n`;
+    if (hasSales) confirmMessage += `• All ${record.quantity_sold} sales transactions\n`;
+    if (hasReturns) confirmMessage += `• All ${record.quantity_returned} return transactions\n`;
+    
+    confirmMessage += `\n🔄 Continue with deletion?`;
 
     if (!confirm(confirmMessage)) {
       return;
     }
 
     try {
-      const response = await api.delete(`/shopkeeper-stock/${record.id}`);  // ✅ Changed
+      await api.delete(`/shopkeeper-stock/${record.id}`);
 
-      alert('Record deleted successfully!\n\n' +
-        (parseFloat(record.quantity_remaining) > 0
-          ? `${record.quantity_remaining} units restored to inventory.`
-          : 'No stock to restore.'));
+      let successMessage = '✅ Transaction deleted successfully!\n\n';
+      
+      if (record.deducted_from_inventory) {
+        successMessage += `📦 INVENTORY RESTORED: ${netRestore} units\n\n`;
+        successMessage += `Calculation:\n`;
+        successMessage += `• Originally issued: ${issuedQty}\n`;
+        if (hasSales) successMessage += `• Sold (lost): ${record.quantity_sold}\n`;
+        if (hasReturns) successMessage += `• Already returned: ${returnedQty} (was in inventory)\n`;
+        successMessage += `• Still with shopkeeper: ${record.quantity_remaining}\n`;
+        successMessage += `\n= Net restored: ${netRestore} units`;
+      } else {
+        successMessage += '⚠️ Old stock - no inventory changes made.';
+      }
+      
+      alert(successMessage);
+      
       loadIssuedStock();
-      loadVarieties(); // Reload to get updated stock levels
+      loadVarieties();
+      loadSupplierInventories();
     } catch (error) {
-      alert(`❌ Error: ${error.response?.data?.detail || error.message}`);  // ✅ Updated error handling
+      alert(`❌ Error: ${error.response?.data?.detail || error.message}`);
     }
   };
 
@@ -278,6 +322,7 @@ const ShopkeeperStockManagement = () => {
   const totalSold = filteredStock.reduce((sum, item) => sum + parseFloat(item.quantity_sold), 0);
   const totalReturned = filteredStock.reduce((sum, item) => sum + parseFloat(item.quantity_returned), 0);
   const totalRemaining = filteredStock.reduce((sum, item) => sum + parseFloat(item.quantity_remaining), 0);
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -378,7 +423,7 @@ const ShopkeeperStockManagement = () => {
                   />
                 </div>
 
-                {/* 🆕 NEW: Searchable Variety Dropdown */}
+                {/* Searchable Variety Dropdown */}
                 <div className="relative">
                   <label className="block mb-1 text-sm font-medium text-gray-700">Variety *</label>
                   <div className="relative">
@@ -403,45 +448,114 @@ const ShopkeeperStockManagement = () => {
                       {filteredVarieties.length === 0 ? (
                         <div className="px-4 py-3 text-sm text-gray-500">No varieties found</div>
                       ) : (
-                        filteredVarieties.map((v) => (
-                          <div
-                            key={v.id}
-                            onClick={() => handleVarietySelect(v)}
-                            className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition border-b border-gray-100 last:border-0"
-                          >
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <div className="font-medium text-gray-900">{v.name}</div>
-                                <div className="text-xs text-gray-500 capitalize mt-0.5">{v.measurement_unit}</div>
-                              </div>
-                              <div className="text-right">
-                                <div className={`text-sm font-semibold ${getAvailableStock(v.id) > 0 ? 'text-green-600' : 'text-red-600'
-                                  }`}>
-                                  {getAvailableStock(v.id).toFixed(1)}
+                        filteredVarieties.map((v) => {
+                          const availStock = getAvailableStock(v.id);
+                          return (
+                            <div
+                              key={v.id}
+                              onClick={() => handleVarietySelect(v)}
+                              className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition border-b border-gray-100 last:border-0"
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium text-gray-900">{v.name}</div>
+                                  <div className="text-xs text-gray-500 capitalize mt-0.5">{v.measurement_unit}</div>
                                 </div>
-                                <div className="text-xs text-gray-500">available</div>
+                                <div className="text-right">
+                                  <div className={`text-sm font-semibold ${
+                                    availStock > 0 ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    {availStock.toFixed(1)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">available</div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* 🆕 NEW: Stock Info Display */}
-                {selectedVariety && (
-                  <div className={`p-4 rounded-lg border-2 flex items-center gap-3 ${selectedVariety.available_stock > 0
-                      ? 'bg-green-50 border-green-300'
-                      : 'bg-red-50 border-red-300'
+                {/* Stock Type Toggle */}
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-700">Stock Type *</label>
+                  <div className="flex gap-3 mt-2">
+                    <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition ${
+                      issueFormData.deducted_from_inventory
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-300 bg-white'
                     }`}>
-                    <Package className={selectedVariety.available_stock > 0 ? 'text-green-600' : 'text-red-600'} size={24} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-700">Available Stock</p>
-                      <p className={`text-2xl font-bold ${selectedVariety.available_stock > 0 ? 'text-green-700' : 'text-red-700'
-                        }`}>
-                        {selectedVariety.available_stock.toFixed(1)} {selectedVariety.measurement_unit}
-                      </p>
+                      <input
+                        type="radio"
+                        checked={issueFormData.deducted_from_inventory}
+                        onChange={() => setIssueFormData({ ...issueFormData, deducted_from_inventory: true })}
+                        className="w-4 h-4"
+                      />
+                      <div className="text-left flex-1">
+                        <div className="font-semibold text-gray-900">New Stock</div>
+                        <div className="text-xs text-gray-600">Deduct from inventory</div>
+                      </div>
+                      {issueFormData.deducted_from_inventory && (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      )}
+                    </label>
+
+                    <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition ${
+                      !issueFormData.deducted_from_inventory
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-gray-300 bg-white'
+                    }`}>
+                      <input
+                        type="radio"
+                        checked={!issueFormData.deducted_from_inventory}
+                        onChange={() => setIssueFormData({ ...issueFormData, deducted_from_inventory: false })}
+                        className="w-4 h-4"
+                      />
+                      <div className="text-left flex-1">
+                        <div className="font-semibold text-gray-900">Old Stock</div>
+                        <div className="text-xs text-gray-600">Don't deduct</div>
+                      </div>
+                      {!issueFormData.deducted_from_inventory && (
+                        <AlertCircle className="w-5 h-5 text-orange-600" />
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                {/* Stock Info Display */}
+                {selectedVariety && (
+                  <div className={`md:col-span-2 p-4 rounded-lg border-2 ${
+                    issueFormData.deducted_from_inventory
+                      ? selectedVariety.available_stock > 0
+                        ? 'bg-green-50 border-green-300'
+                        : 'bg-red-50 border-red-300'
+                      : 'bg-orange-50 border-orange-300'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <Package className={
+                        issueFormData.deducted_from_inventory
+                          ? selectedVariety.available_stock > 0 ? 'text-green-600' : 'text-red-600'
+                          : 'text-orange-600'
+                      } size={24} />
+                      <div className="flex-1">
+                        {issueFormData.deducted_from_inventory ? (
+                          <>
+                            <p className="text-sm font-medium text-gray-700">Available in Inventory</p>
+                            <p className={`text-2xl font-bold ${
+                              selectedVariety.available_stock > 0 ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {selectedVariety.available_stock.toFixed(1)} {selectedVariety.measurement_unit}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-orange-700">Old Stock Mode</p>
+                            <p className="text-xs text-orange-600 mt-1">Items will NOT be deducted from inventory</p>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -452,13 +566,18 @@ const ShopkeeperStockManagement = () => {
                     type="number"
                     step="0.01"
                     min="0"
-                    max={selectedVariety ? selectedVariety.available_stock : undefined} // ✅ Changed
+                    max={
+                      issueFormData.deducted_from_inventory && selectedVariety
+                        ? selectedVariety.available_stock
+                        : undefined
+                    }
                     value={issueFormData.quantity_issued}
                     onChange={(e) => setIssueFormData({ ...issueFormData, quantity_issued: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-500/20"
                     required
                   />
-                  {selectedVariety && issueFormData.quantity_issued && parseFloat(issueFormData.quantity_issued) > selectedVariety.available_stock && (
+                  {issueFormData.deducted_from_inventory && selectedVariety && issueFormData.quantity_issued && 
+                   parseFloat(issueFormData.quantity_issued) > selectedVariety.available_stock && (
                     <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                       <AlertTriangle size={12} />
                       Exceeds available stock!
@@ -477,7 +596,7 @@ const ShopkeeperStockManagement = () => {
                   />
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="block mb-1 text-sm font-medium text-gray-700">Notes</label>
                   <input
                     type="text"
@@ -485,33 +604,6 @@ const ShopkeeperStockManagement = () => {
                     onChange={(e) => setIssueFormData({ ...issueFormData, notes: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-500/20"
                   />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition">
-                    <input
-                      type="checkbox"
-                      checked={issueFormData.deduct_from_inventory}
-                      onChange={(e) => setIssueFormData({ ...issueFormData, deduct_from_inventory: e.target.checked })}
-                      className="w-5 h-5 text-gray-600 rounded focus:ring-gray-500"
-                    />
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">Deduct from Inventory</p>
-                      <div className="flex items-center gap-2 text-sm">
-                        {issueFormData.deduct_from_inventory ? (
-                          <>
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                            <span className="text-gray-600">Stock will be deducted from current inventory</span>
-                          </>
-                        ) : (
-                          <>
-                            <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                            <span className="text-gray-600">Stock will NOT be deducted (for old/external stock)</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </label>
                 </div>
 
                 <div className="md:col-span-2 flex gap-3">
@@ -630,6 +722,17 @@ const ShopkeeperStockManagement = () => {
                             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                           >
                             <TrendingDown size={16} />
+                            Record Sales
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              setSelectedRecord(record);
+                              setShowReturnForm(true);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
+                          >
+                            <RotateCcw size={16} />
                             Record Return
                           </button>
                         </div>
@@ -750,6 +853,15 @@ const ShopkeeperStockManagement = () => {
                 <p className="text-sm text-gray-600">Shopkeeper: <span className="font-medium text-gray-900">{selectedRecord.shopkeeper_name}</span></p>
                 <p className="text-sm text-gray-600">Variety: <span className="font-medium text-gray-900">{selectedRecord.variety.name}</span></p>
                 <p className="text-sm text-gray-600">Remaining: <span className="font-bold text-purple-600">{parseFloat(selectedRecord.quantity_remaining).toFixed(1)}</span></p>
+                
+                {selectedRecord.deducted_from_inventory && (
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                    <p className="text-xs text-green-700 flex items-center gap-1">
+                      <CheckCircle size={12} />
+                      Inventory will be restored when returned
+                    </p>
+                  </div>
+                )}
               </div>
 
               <form onSubmit={handleRecordReturn} className="space-y-4">

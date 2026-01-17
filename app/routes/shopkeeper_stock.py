@@ -348,18 +348,17 @@ def get_shopkeeper_summary(
 @router.delete("/{stock_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_shopkeeper_stock(
     stock_id: int,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
     """
     Delete a shopkeeper stock record (tenant-isolated)
-    Restores both variety AND supplier inventory
+    ✅ FIXED: Restores FULL quantity_issued (not just remaining)
     """
     
-    # 🆕 Get stock WITH TENANT FILTER
     stock = db.query(ShopkeeperStock).filter(
         ShopkeeperStock.id == stock_id,
-        ShopkeeperStock.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ShopkeeperStock.tenant_id == tenant.id
     ).first()
     
     if not stock:
@@ -368,38 +367,45 @@ def delete_shopkeeper_stock(
             detail=f"Stock record with ID {stock_id} not found in your business"
         )
     
+    # ✅ CRITICAL FIX: Calculate net quantity to restore
+    # quantity_issued - quantity_returned (returns were already added back!)
+    # Example: Issued 50, Sold 20, Returned 30
+    # - Return already added 30 back to inventory
+    # - So we only need to restore: 50 - 30 = 20
+    restore_quantity = stock.quantity_issued - stock.quantity_returned
+    
     # Restore supplier inventory if applicable (WITH TENANT CHECK)
-    if stock.deducted_from_inventory and stock.supplier_inventory_id and stock.quantity_remaining > 0:
-        # 🆕 Verify supplier inventory belongs to same tenant
+    if stock.deducted_from_inventory and stock.supplier_inventory_id and restore_quantity > 0:
         supplier_inventory = db.query(SupplierInventory).filter(
             SupplierInventory.id == stock.supplier_inventory_id,
-            SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            SupplierInventory.tenant_id == tenant.id
         ).first()
         
         if supplier_inventory:
-            supplier_inventory.quantity_used -= stock.quantity_remaining
-            supplier_inventory.quantity_remaining += stock.quantity_remaining
+            # ✅ Restore full issued quantity
+            supplier_inventory.quantity_used -= restore_quantity
+            supplier_inventory.quantity_remaining += restore_quantity
     
     # Restore variety stock if applicable
-    if stock.deducted_from_inventory and stock.quantity_remaining > 0:
-        # 🆕 Verify variety belongs to same tenant
+    if stock.deducted_from_inventory and restore_quantity > 0:
         variety = db.query(ClothVariety).filter(
             ClothVariety.id == stock.variety_id,
-            ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            ClothVariety.tenant_id == tenant.id
         ).first()
         
         if variety:
-            variety.current_stock += stock.quantity_remaining
+            # ✅ Restore full issued quantity
+            variety.current_stock += restore_quantity
             
             # Log inventory movement
             inventory_movement = InventoryMovement(
-                tenant_id=tenant.id,  # 🆕 SET TENANT
+                tenant_id=tenant.id,
                 variety_id=stock.variety_id,
                 movement_type='shopkeeper_issue_reversal',
-                quantity=stock.quantity_remaining,
+                quantity=restore_quantity,  # Full quantity
                 reference_id=stock_id,
                 reference_type='shopkeeper_stock_deleted',
-                notes=f'Shopkeeper stock deleted - restored {stock.quantity_remaining} units',
+                notes=f'Shopkeeper transaction deleted - restored FULL {restore_quantity} units (was issued, sold: {stock.quantity_sold}, returned: {stock.quantity_returned})',
                 movement_date=date.today(),
                 stock_after=variety.current_stock
             )
