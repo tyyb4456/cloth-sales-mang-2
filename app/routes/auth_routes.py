@@ -1,4 +1,4 @@
-# app/routes/auth.py - Authentication API Routes
+# app/routes/auth_routes.py - Authentication API Routes (UPDATED WITH EMAIL)
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -14,6 +14,7 @@ from auth_schemas import (
     SubscriptionResponse
 )
 from auth_service import AuthService
+from email_service import EmailService  # 🆕 NEW
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
@@ -89,6 +90,7 @@ def register_business(
     """
     Register a new business (tenant) with owner account
     Includes 7-day free trial
+    🆕 SENDS VERIFICATION EMAIL
     """
     try:
         # Create tenant and owner user
@@ -250,9 +252,19 @@ def verify_email(
 ):
     """
     Verify user email with token
+    🆕 SENDS WELCOME EMAIL
     """
     try:
-        AuthService.verify_email(verification.token, db)
+        user = AuthService.verify_email(verification.token, db)
+        
+        # 🆕 SEND WELCOME EMAIL
+        tenant = db.query(Tenant).filter(Tenant.id == user.tenant_id).first()
+        if tenant:
+            EmailService.send_welcome_email(
+                email=user.email,
+                full_name=user.full_name,
+                business_name=tenant.business_name
+            )
         
         return MessageResponse(
             message="Email verified successfully",
@@ -274,6 +286,7 @@ def resend_verification(
 ):
     """
     Resend email verification token
+    🆕 SENDS VERIFICATION EMAIL
     """
     if user.is_email_verified:
         raise HTTPException(
@@ -281,7 +294,14 @@ def resend_verification(
             detail="Email already verified"
         )
     
-    AuthService.create_verification_token(user.id, db)
+    verification_token = AuthService.create_verification_token(user.id, db)
+    
+    # 🆕 SEND VERIFICATION EMAIL
+    EmailService.send_verification_email(
+        email=user.email,
+        full_name=user.full_name,
+        verification_token=verification_token.token
+    )
     
     return MessageResponse(
         message="Verification email sent",
@@ -290,6 +310,56 @@ def resend_verification(
 
 
 # ==================== PASSWORD MANAGEMENT ====================
+
+# 🆕 NEW ENDPOINT - Forgot Password
+@router.post("/forgot-password", response_model=MessageResponse)
+def forgot_password(
+    request: PasswordResetRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Request password reset (send email with reset link)
+    🆕 SENDS PASSWORD RESET EMAIL
+    """
+    try:
+        AuthService.create_password_reset_token(request.email, db)
+        
+        return MessageResponse(
+            message="If this email exists, a password reset link has been sent",
+            success=True
+        )
+    except Exception as e:
+        # Always return success to not reveal if email exists
+        return MessageResponse(
+            message="If this email exists, a password reset link has been sent",
+            success=True
+        )
+
+
+# 🆕 NEW ENDPOINT - Reset Password
+@router.post("/reset-password", response_model=MessageResponse)
+def reset_password(
+    reset_data: PasswordResetConfirm,
+    db: Session = Depends(get_db)
+):
+    """
+    Reset password using token from email
+    """
+    try:
+        AuthService.reset_password(reset_data.token, reset_data.new_password, db)
+        
+        return MessageResponse(
+            message="Password reset successfully",
+            success=True
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Password reset failed: {str(e)}"
+        )
+
 
 @router.post("/change-password", response_model=MessageResponse)
 def change_password(
@@ -356,6 +426,7 @@ def auth_health_check():
             "JWT tokens",
             "7-day free trial",
             "Email verification",
+            "Password reset",
             "Session management"
         ]
     }

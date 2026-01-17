@@ -23,8 +23,14 @@ import CustomerLoanDashboard from './components/CustomerLoanDashboard';
 import ShopkeeperStockManagement from './components/ShopkeeperStockManagement';
 import LandingAuthPage from './components/LandingAuthPage';
 
+import EmailVerification from './components/auth/EmailVerification';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
+
+
 // Auth Context
 const AuthContext = createContext();
+
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -114,6 +120,10 @@ function App() {
         <Routes>
           {/* Public Route - Landing/Auth Page */}
           <Route path="/" element={<LandingAuthPage />} />
+
+          <Route path="/verify-email" element={<EmailVerification />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Protected Routes - All wrapped in Layout */}
           <Route path="/varieties" element={

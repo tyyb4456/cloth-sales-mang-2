@@ -1,4 +1,4 @@
-# app/auth_service.py - Authentication Business Logic
+# app/auth_service.py - Authentication Business Logic (UPDATED WITH EMAIL)
 
 from datetime import datetime, timedelta, date
 from typing import Optional, Tuple
@@ -86,7 +86,15 @@ class AuthService:
         db.refresh(owner_user)
         
         # Generate email verification token
-        AuthService.create_verification_token(owner_user.id, db)
+        verification_token = AuthService.create_verification_token(owner_user.id, db)
+        
+        # 🆕 SEND VERIFICATION EMAIL
+        from email_service import EmailService
+        EmailService.send_verification_email(
+            email=owner_user.email,
+            full_name=owner_user.full_name,
+            verification_token=verification_token.token
+        )
         
         return tenant, owner_user
     
@@ -263,9 +271,6 @@ class AuthService:
         db.commit()
         db.refresh(verification_token)
         
-        # TODO: Send email with verification link
-        # send_verification_email(user.email, token)
-        
         return verification_token
     
     @staticmethod
@@ -294,6 +299,84 @@ class AuthService:
         # Mark user as verified
         user = db.query(User).filter(User.id == verification.user_id).first()
         user.is_email_verified = True
+        
+        db.commit()
+        db.refresh(user)
+        
+        return user
+    
+    # 🆕 NEW METHOD - Password Reset Token
+    @staticmethod
+    def create_password_reset_token(email: str, db: Session) -> PasswordResetToken:
+        """Create password reset token and send email"""
+        user = db.query(User).filter(User.email == email).first()
+        
+        if not user:
+            # Don't reveal if email exists or not (security)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="If this email exists, a reset link has been sent"
+            )
+        
+        # Invalidate old tokens
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.is_used == False
+        ).update({"is_used": True})
+        
+        token = PasswordResetToken.generate_token()
+        expires_at = datetime.now() + timedelta(hours=1)  # 1 hour expiry
+        
+        reset_token = PasswordResetToken(
+            user_id=user.id,
+            token=token,
+            expires_at=expires_at,
+            is_used=False
+        )
+        
+        db.add(reset_token)
+        db.commit()
+        db.refresh(reset_token)
+        
+        # Send email
+        from email_service import EmailService
+        EmailService.send_password_reset_email(
+            email=user.email,
+            full_name=user.full_name,
+            reset_token=token
+        )
+        
+        return reset_token
+    
+    # 🆕 NEW METHOD - Reset Password
+    @staticmethod
+    def reset_password(token: str, new_password: str, db: Session) -> User:
+        """Reset user password with token"""
+        reset_token = db.query(PasswordResetToken).filter(
+            PasswordResetToken.token == token,
+            PasswordResetToken.is_used == False
+        ).first()
+        
+        if not reset_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset token"
+            )
+        
+        if reset_token.expires_at < datetime.now():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Reset token has expired"
+            )
+        
+        # Mark token as used
+        reset_token.is_used = True
+        
+        # Update password
+        user = db.query(User).filter(User.id == reset_token.user_id).first()
+        user.hashed_password = User.hash_password(new_password)
+        user.failed_login_attempts = 0  # Reset failed attempts
+        user.account_locked_until = None  # Unlock account if locked
         
         db.commit()
         db.refresh(user)

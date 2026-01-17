@@ -2,24 +2,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
-import { 
-  Store, TrendingUp, Users, BarChart3, 
+import {
+  Store, TrendingUp, Users, BarChart3,
   Lock, Mail, Building2, Phone, Check
 } from 'lucide-react';
 
 export default function LandingAuthPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  
+
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [loading, setLoading] = useState(false);
-  
+
   const [loginData, setLoginData] = useState({
     email: '',
     password: ''
   });
-  
+
   const [registerData, setRegisterData] = useState({
     business_name: '',
     owner_name: '',
@@ -34,14 +34,14 @@ export default function LandingAuthPage() {
 
   const handleLogin = async () => {
     setLoading(true);
-    
+
     try {
       const response = await fetch('http://127.0.0.1:8000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginData)
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         login(data.access_token, data.refresh_token, data.user, data.tenant);
@@ -62,14 +62,14 @@ export default function LandingAuthPage() {
       alert('Passwords do not match');
       return;
     }
-    
+
     if (registerData.password.length < 8) {
       alert('Password must be at least 8 characters');
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       const response = await fetch('http://127.0.0.1:8000/auth/register', {
         method: 'POST',
@@ -86,7 +86,7 @@ export default function LandingAuthPage() {
           country: 'Pakistan'
         })
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         login(data.access_token, data.refresh_token, data.user, data.tenant);
@@ -106,7 +106,7 @@ export default function LandingAuthPage() {
   if (!showAuth) {
     return (
       <div className="min-h-screen bg-white">
-        
+
         <nav className="border-b border-gray-200 bg-white">
           <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -127,7 +127,7 @@ export default function LandingAuthPage() {
             <div className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full mb-6">
               7-day free trial
             </div>
-            
+
             <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
               Inventory and sales management for cloth shops
             </h1>
@@ -151,7 +151,7 @@ export default function LandingAuthPage() {
         <div className="border-t border-gray-200 bg-gray-50">
           <div className="max-w-6xl mx-auto px-6 py-20">
             <div className="grid md:grid-cols-3 gap-12">
-              
+
               <div>
                 <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
                   <TrendingUp className="w-5 h-5 text-white" />
@@ -190,9 +190,9 @@ export default function LandingAuthPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      
+
       <div className="bg-white border border-gray-200 rounded-lg max-w-md w-full p-8">
-        
+
         <div className="flex items-center justify-center gap-2 mb-8">
           <Store className="w-6 h-6 text-gray-900" />
           <span className="text-xl font-semibold text-gray-900">ShopSmart</span>
@@ -201,21 +201,19 @@ export default function LandingAuthPage() {
         <div className="flex gap-1 mb-8 bg-gray-100 p-1 rounded-lg">
           <button
             onClick={() => setAuthMode('login')}
-            className={`flex-1 py-2 rounded-md text-sm font-medium transition ${
-              authMode === 'login'
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition ${authMode === 'login'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
-            }`}
+              }`}
           >
             Sign In
           </button>
           <button
             onClick={() => setAuthMode('register')}
-            className={`flex-1 py-2 rounded-md text-sm font-medium transition ${
-              authMode === 'register'
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition ${authMode === 'register'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
-            }`}
+              }`}
           >
             Sign Up
           </button>
@@ -231,7 +229,7 @@ export default function LandingAuthPage() {
                 type="email"
                 required
                 value={loginData.email}
-                onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="you@company.com"
               />
@@ -245,10 +243,21 @@ export default function LandingAuthPage() {
                 type="password"
                 required
                 value={loginData.password}
-                onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="••••••••"
               />
+            </div>
+
+            {/* Add this after password input */}
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Forgot Password?
+              </button>
             </div>
 
             <button
@@ -268,7 +277,7 @@ export default function LandingAuthPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Business Name
@@ -277,7 +286,7 @@ export default function LandingAuthPage() {
                 type="text"
                 required
                 value={registerData.business_name}
-                onChange={(e) => setRegisterData({...registerData, business_name: e.target.value})}
+                onChange={(e) => setRegisterData({ ...registerData, business_name: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="My Cloth Shop"
               />
@@ -291,7 +300,7 @@ export default function LandingAuthPage() {
                 type="text"
                 required
                 value={registerData.owner_name}
-                onChange={(e) => setRegisterData({...registerData, owner_name: e.target.value})}
+                onChange={(e) => setRegisterData({ ...registerData, owner_name: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="Your name"
               />
@@ -305,7 +314,7 @@ export default function LandingAuthPage() {
                 type="email"
                 required
                 value={registerData.email}
-                onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="you@company.com"
               />
@@ -318,7 +327,7 @@ export default function LandingAuthPage() {
               <input
                 type="tel"
                 value={registerData.phone}
-                onChange={(e) => setRegisterData({...registerData, phone: e.target.value})}
+                onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="03XX-XXXXXXX"
               />
@@ -330,7 +339,7 @@ export default function LandingAuthPage() {
                 <input
                   type="text"
                   value={registerData.city}
-                  onChange={(e) => setRegisterData({...registerData, city: e.target.value})}
+                  onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
                   className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                   placeholder="Lahore"
                 />
@@ -340,7 +349,7 @@ export default function LandingAuthPage() {
                 <input
                   type="text"
                   value={registerData.state}
-                  onChange={(e) => setRegisterData({...registerData, state: e.target.value})}
+                  onChange={(e) => setRegisterData({ ...registerData, state: e.target.value })}
                   className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                   placeholder="Punjab"
                 />
@@ -355,7 +364,7 @@ export default function LandingAuthPage() {
                 type="password"
                 required
                 value={registerData.password}
-                onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="Min. 8 characters"
               />
@@ -369,11 +378,13 @@ export default function LandingAuthPage() {
                 type="password"
                 required
                 value={registerData.confirm_password}
-                onChange={(e) => setRegisterData({...registerData, confirm_password: e.target.value})}
+                onChange={(e) => setRegisterData({ ...registerData, confirm_password: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="Re-enter password"
               />
             </div>
+
+
 
             <button
               onClick={handleRegister}

@@ -1,10 +1,11 @@
 # app/auth_models.py - Multi-Tenant Authentication Models
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Date
+from sqlalchemy import Column, Integer, String, DateTime, DECIMAL, ForeignKey, Text, Boolean,Date ,Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 import secrets
+import enum
 import bcrypt
 
 # Use bcrypt directly instead of passlib to avoid version issues
@@ -196,3 +197,124 @@ class PasswordResetToken(Base):
     def generate_token() -> str:
         """Generate a secure random token"""
         return secrets.token_urlsafe(32)
+
+
+# class PaymentMethod(str, enum.Enum):
+#     EASYPAISA = "easypaisa"
+#     JAZZCASH = "jazzcash"
+#     CARD = "card"
+#     BANK_TRANSFER = "bank_transfer"
+
+# class PaymentStatus(str, enum.Enum):
+#     PENDING = "pending"
+#     PROCESSING = "processing"
+#     COMPLETED = "completed"
+#     FAILED = "failed"
+#     REFUNDED = "refunded"
+
+# class SubscriptionPlan(str, enum.Enum):
+#     FREE_TRIAL = "free_trial"
+#     BASIC = "basic"        # PKR 2,999/month
+#     PREMIUM = "premium"    # PKR 4,999/month
+
+# class Payment(Base):
+#     """Payment transactions for subscriptions"""
+#     __tablename__ = "payments"
+    
+#     id = Column(Integer, primary_key=True, index=True)
+#     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    
+#     # Payment Details
+#     amount = Column(DECIMAL(10, 2), nullable=False)
+#     currency = Column(String(10), default="PKR")
+#     payment_method = Column(
+#         SQLEnum(PaymentMethod, values_callable=lambda enum: [e.value for e in enum], native_enum=False),
+#         nullable=False
+#     )
+#     payment_status = Column(
+#         SQLEnum(PaymentStatus, values_callable=lambda enum: [e.value for e in enum], native_enum=False),
+#         nullable=False,
+#         default=PaymentStatus.PENDING
+#     )
+    
+#     # Subscription Info
+#     subscription_plan = Column(
+#         SQLEnum(SubscriptionPlan, values_callable=lambda enum: [e.value for e in enum], native_enum=False),
+#         nullable=False
+#     )
+#     billing_period_start = Column(DateTime, nullable=False)
+#     billing_period_end = Column(DateTime, nullable=False)
+    
+#     # Payment Gateway Details
+#     transaction_id = Column(String(255), unique=True, index=True)  # PayFast/Gateway transaction ID
+#     gateway_response = Column(Text)  # Full response from gateway
+    
+#     # Customer Details
+#     customer_name = Column(String(100))
+#     customer_email = Column(String(255))
+#     customer_phone = Column(String(20))
+    
+#     # Metadata
+#     payment_date = Column(DateTime, nullable=True)
+#     failure_reason = Column(Text, nullable=True)
+#     notes = Column(Text, nullable=True)
+    
+#     created_at = Column(DateTime, server_default=func.now())
+#     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+#     # Relationships
+#     tenant = relationship("Tenant")
+    
+#     def __repr__(self):
+#         return f"<Payment {self.id} - {self.amount} PKR - {self.payment_status}>"
+
+
+# class SubscriptionHistory(Base):
+#     """Track subscription changes"""
+#     __tablename__ = "subscription_history"
+    
+#     id = Column(Integer, primary_key=True, index=True)
+#     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+#     payment_id = Column(Integer, ForeignKey("payments.id", ondelete="SET NULL"), nullable=True)
+    
+#     previous_plan = Column(String(50))
+#     new_plan = Column(String(50))
+#     change_reason = Column(String(100))  # upgrade, downgrade, trial_ended, payment_failed
+    
+#     effective_date = Column(DateTime, nullable=False)
+#     created_at = Column(DateTime, server_default=func.now())
+    
+#     # Relationships
+#     tenant = relationship("Tenant")
+#     payment = relationship("Payment")
+
+
+# # PRICING CONFIGURATION
+# SUBSCRIPTION_PRICES = {
+#     "basic": {
+#         "monthly": 2999,  # PKR
+#         "yearly": 29990,  # PKR (2 months free)
+#         "name": "Basic Plan",
+#         "features": [
+#             "Up to 3 users",
+#             "Unlimited varieties",
+#             "Sales tracking",
+#             "Basic reports",
+#             "Email support"
+#         ]
+#     },
+#     "premium": {
+#         "monthly": 4999,  # PKR
+#         "yearly": 49990,  # PKR (2 months free)
+#         "name": "Premium Plan",
+#         "features": [
+#             "Up to 10 users",
+#             "Everything in Basic",
+#             "Advanced analytics",
+#             "AI predictions",
+#             "Custom reports",
+#             "Priority support",
+#             "WhatsApp integration"
+#         ]
+#     }
+# }
