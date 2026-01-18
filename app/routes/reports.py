@@ -8,7 +8,9 @@ from models import SupplierInventory, SupplierReturn, Sale
 from schemas import DailyReport, DailySupplierSummary, DailySalesSummary
 
 from routes.auth_routes import get_current_tenant
-from auth_models import Tenant
+from auth_models import Tenant, User
+from rbac import require_permission, Permission
+
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/reports", tags=["Reports"])
 def get_daily_report(
     report_date: date,
     tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    user: User = Depends(require_permission(Permission.VIEW_REPORTS)),  # 🆕 RBAC
     db: Session = Depends(get_db)
 ):
     """Get complete daily report including supplier and sales data"""
@@ -77,7 +80,11 @@ def get_daily_report(
     )
 
 @router.get("/profit/{report_date}")
-def get_profit_report(report_date: date, tenant: Tenant = Depends(get_current_tenant), db: Session = Depends(get_db)):
+def get_profit_report(
+        report_date: date, 
+        tenant: Tenant = Depends(get_current_tenant),
+        user: User = Depends(require_permission(Permission.VIEW_REPORTS)),  # 🆕 RBAC
+        db: Session = Depends(get_db)):
     """Get detailed profit breakdown for a specific date"""
     
     # Get profit by variety

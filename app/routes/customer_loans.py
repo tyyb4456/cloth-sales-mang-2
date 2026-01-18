@@ -16,6 +16,7 @@ from schemas import (
 )
 from routes.auth_routes import get_current_tenant
 from auth_models import Tenant
+from rbac import require_permission, Permission
 
 router = APIRouter(prefix="/loans", tags=["Customer Loans"])
 

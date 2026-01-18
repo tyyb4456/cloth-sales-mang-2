@@ -27,6 +27,12 @@ import EmailVerification from './components/auth/EmailVerification';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsAndConditions from './pages/TermsAndConditions';
+
+import TeamManagement from './pages/TeamManagement';
+
+
 
 // Auth Context
 const AuthContext = createContext();
@@ -125,10 +131,19 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
+
           {/* Protected Routes - All wrapped in Layout */}
           <Route path="/varieties" element={
             <ProtectedRoute>
               <Layout><Varieties /></Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/team" element={
+            <ProtectedRoute>
+              <Layout><TeamManagement /></Layout>
             </ProtectedRoute>
           } />
 

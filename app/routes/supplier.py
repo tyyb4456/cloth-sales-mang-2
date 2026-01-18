@@ -1,4 +1,4 @@
-# app/routes/supplier.py - UPDATED WITH MULTI-TENANCY
+# app/routes/supplier.py - UPDATED WITH MULTI-TENANCY AND RBAC
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -13,8 +13,9 @@ from schemas import (
     SupplierReturnCreate, SupplierReturnResponse,
     DailySupplierSummary
 )
-from routes.auth_routes import get_current_tenant  # 🆕 NEW
-from auth_models import Tenant  # 🆕 NEW
+from routes.auth_routes import get_current_tenant
+from auth_models import Tenant, User
+from rbac import require_permission, Permission  # 🆕 RBAC IMPORTS
 
 router = APIRouter(prefix="/supplier", tags=["Supplier Management"])
 
@@ -24,15 +25,16 @@ router = APIRouter(prefix="/supplier", tags=["Supplier Management"])
 @router.post("/inventory", response_model=SupplierInventoryResponse, status_code=status.HTTP_201_CREATED)
 def add_supplier_inventory(
     inventory: SupplierInventoryCreate,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.ADD_INVENTORY)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Record daily supply from supplier (tenant-isolated)"""
+    """Record daily supply from supplier (tenant-isolated, requires ADD_INVENTORY permission)"""
     
-    # 🆕 Check if variety exists FOR THIS TENANT
+    # Check if variety exists FOR THIS TENANT
     variety = db.query(ClothVariety).filter(
         ClothVariety.id == inventory.variety_id,
-        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ClothVariety.tenant_id == tenant.id
     ).first()
     
     if not variety:
@@ -45,7 +47,7 @@ def add_supplier_inventory(
     total_amount = quantity_decimal * inventory.price_per_item
     
     db_inventory = SupplierInventory(
-        tenant_id=tenant.id,  # 🆕 SET TENANT
+        tenant_id=tenant.id,
         supplier_name=inventory.supplier_name,
         variety_id=inventory.variety_id,
         quantity=quantity_decimal,
@@ -65,7 +67,7 @@ def add_supplier_inventory(
     
     # Log inventory movement
     inventory_movement = InventoryMovement(
-        tenant_id=tenant.id,  # 🆕 SET TENANT
+        tenant_id=tenant.id,
         variety_id=inventory.variety_id,
         movement_type='supply',
         quantity=quantity_decimal,
@@ -85,13 +87,14 @@ def add_supplier_inventory(
 
 @router.get("/inventory", response_model=List[SupplierInventoryResponse])
 def get_all_inventory(
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_INVENTORY)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get all supplier inventory records (tenant-isolated)"""
+    """Get all supplier inventory records (tenant-isolated, requires VIEW_INVENTORY permission)"""
     
     inventories = db.query(SupplierInventory).filter(
-        SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierInventory.tenant_id == tenant.id
     ).all()
     
     return inventories
@@ -100,14 +103,15 @@ def get_all_inventory(
 @router.get("/inventory/date/{supply_date}", response_model=List[SupplierInventoryResponse])
 def get_inventory_by_date(
     supply_date: date,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_INVENTORY)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get supplier inventory for a specific date (tenant-isolated)"""
+    """Get supplier inventory for a specific date (tenant-isolated, requires VIEW_INVENTORY permission)"""
     
     inventories = db.query(SupplierInventory).filter(
         SupplierInventory.supply_date == supply_date,
-        SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierInventory.tenant_id == tenant.id
     ).all()
     
     return inventories
@@ -116,14 +120,15 @@ def get_inventory_by_date(
 @router.delete("/inventory/{inventory_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_inventory(
     inventory_id: int,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.DELETE_INVENTORY)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Delete a supplier inventory record (tenant-isolated)"""
+    """Delete a supplier inventory record (tenant-isolated, requires DELETE_INVENTORY permission)"""
     
     inventory = db.query(SupplierInventory).filter(
         SupplierInventory.id == inventory_id,
-        SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierInventory.tenant_id == tenant.id
     ).first()
     
     if not inventory:
@@ -142,14 +147,14 @@ def delete_inventory(
     # Restore variety stock
     variety = db.query(ClothVariety).filter(
         ClothVariety.id == inventory.variety_id,
-        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ClothVariety.tenant_id == tenant.id
     ).first()
     
     if variety:
         variety.current_stock -= inventory.quantity
         
         inventory_movement = InventoryMovement(
-            tenant_id=tenant.id,  # 🆕 SET TENANT
+            tenant_id=tenant.id,
             variety_id=inventory.variety_id,
             movement_type='supply_reversal',
             quantity=-inventory.quantity,
@@ -172,15 +177,16 @@ def delete_inventory(
 @router.post("/returns", response_model=SupplierReturnResponse, status_code=status.HTTP_201_CREATED)
 def add_supplier_return(
     return_item: SupplierReturnCreate,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.ADD_RETURNS)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Record returns to supplier (tenant-isolated)"""
+    """Record returns to supplier (tenant-isolated, requires ADD_RETURNS permission)"""
     
-    # 🆕 Check if variety exists FOR THIS TENANT
+    # Check if variety exists FOR THIS TENANT
     variety = db.query(ClothVariety).filter(
         ClothVariety.id == return_item.variety_id,
-        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ClothVariety.tenant_id == tenant.id
     ).first()
     
     if not variety:
@@ -198,12 +204,12 @@ def add_supplier_return(
             detail=f"Insufficient stock! Available: {variety.current_stock}"
         )
     
-    # 🆕 Find supplier inventory to return from (FIFO - TENANT FILTERED)
+    # Find supplier inventory to return from (FIFO - TENANT FILTERED)
     supplier_inventory = db.query(SupplierInventory).filter(
         SupplierInventory.variety_id == return_item.variety_id,
         SupplierInventory.supplier_name == return_item.supplier_name,
         SupplierInventory.quantity_remaining > 0,
-        SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierInventory.tenant_id == tenant.id
     ).order_by(SupplierInventory.supply_date.asc()).first()
     
     if not supplier_inventory:
@@ -221,7 +227,7 @@ def add_supplier_return(
     total_amount = quantity_decimal * return_item.price_per_item
     
     db_return = SupplierReturn(
-        tenant_id=tenant.id,  # 🆕 SET TENANT
+        tenant_id=tenant.id,
         supplier_name=return_item.supplier_name,
         variety_id=return_item.variety_id,
         quantity=quantity_decimal,
@@ -244,7 +250,7 @@ def add_supplier_return(
     
     # Log inventory movement
     inventory_movement = InventoryMovement(
-        tenant_id=tenant.id,  # 🆕 SET TENANT
+        tenant_id=tenant.id,
         variety_id=return_item.variety_id,
         movement_type='return',
         quantity=-quantity_decimal,
@@ -264,13 +270,14 @@ def add_supplier_return(
 
 @router.get("/returns", response_model=List[SupplierReturnResponse])
 def get_all_returns(
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_RETURNS)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get all supplier return records (tenant-isolated)"""
+    """Get all supplier return records (tenant-isolated, requires VIEW_RETURNS permission)"""
     
     returns = db.query(SupplierReturn).filter(
-        SupplierReturn.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierReturn.tenant_id == tenant.id
     ).all()
     
     return returns
@@ -279,14 +286,15 @@ def get_all_returns(
 @router.get("/returns/date/{return_date}", response_model=List[SupplierReturnResponse])
 def get_returns_by_date(
     return_date: date,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_RETURNS)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get supplier returns for a specific date (tenant-isolated)"""
+    """Get supplier returns for a specific date (tenant-isolated, requires VIEW_RETURNS permission)"""
     
     returns = db.query(SupplierReturn).filter(
         SupplierReturn.return_date == return_date,
-        SupplierReturn.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierReturn.tenant_id == tenant.id
     ).all()
     
     return returns
@@ -295,14 +303,15 @@ def get_returns_by_date(
 @router.delete("/returns/{return_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_return(
     return_id: int,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.DELETE_RETURNS)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Delete a supplier return record (tenant-isolated)"""
+    """Delete a supplier return record (tenant-isolated, requires DELETE_RETURNS permission)"""
     
     return_record = db.query(SupplierReturn).filter(
         SupplierReturn.id == return_id,
-        SupplierReturn.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierReturn.tenant_id == tenant.id
     ).first()
     
     if not return_record:
@@ -315,7 +324,7 @@ def delete_return(
     if return_record.supplier_inventory_id:
         supplier_inventory = db.query(SupplierInventory).filter(
             SupplierInventory.id == return_record.supplier_inventory_id,
-            SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            SupplierInventory.tenant_id == tenant.id
         ).first()
         
         if supplier_inventory:
@@ -325,14 +334,14 @@ def delete_return(
     # Restore variety stock
     variety = db.query(ClothVariety).filter(
         ClothVariety.id == return_record.variety_id,
-        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ClothVariety.tenant_id == tenant.id
     ).first()
     
     if variety:
         variety.current_stock += return_record.quantity
         
         inventory_movement = InventoryMovement(
-            tenant_id=tenant.id,  # 🆕 SET TENANT
+            tenant_id=tenant.id,
             variety_id=return_record.variety_id,
             movement_type='return_reversal',
             quantity=return_record.quantity,
@@ -355,30 +364,31 @@ def delete_return(
 @router.get("/daily-summary/{summary_date}", response_model=DailySupplierSummary)
 def get_daily_supplier_summary(
     summary_date: date,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_INVENTORY)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get supplier summary for a specific date (tenant-isolated)"""
+    """Get supplier summary for a specific date (tenant-isolated, requires VIEW_INVENTORY permission)"""
     
-    # 🆕 TENANT FILTERED
+    # TENANT FILTERED
     supply_result = db.query(
         func.sum(SupplierInventory.total_amount).label('total'),
         func.count(SupplierInventory.id).label('count')
     ).filter(
         SupplierInventory.supply_date == summary_date,
-        SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierInventory.tenant_id == tenant.id
     ).first()
     
     total_supply = supply_result.total if supply_result.total else Decimal('0.00')
     supply_count = supply_result.count if supply_result.count else 0
     
-    # 🆕 TENANT FILTERED
+    # TENANT FILTERED
     return_result = db.query(
         func.sum(SupplierReturn.total_amount).label('total'),
         func.count(SupplierReturn.id).label('count')
     ).filter(
         SupplierReturn.return_date == summary_date,
-        SupplierReturn.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierReturn.tenant_id == tenant.id
     ).first()
     
     total_returns = return_result.total if return_result.total else Decimal('0.00')
@@ -399,12 +409,13 @@ def get_daily_supplier_summary(
 @router.get("/supplier-summary/{summary_date}")
 def get_supplier_wise_summary(
     summary_date: date,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_INVENTORY)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get summary grouped by supplier for a specific date (tenant-isolated)"""
+    """Get summary grouped by supplier for a specific date (tenant-isolated, requires VIEW_INVENTORY permission)"""
     
-    # 🆕 TENANT FILTERED
+    # TENANT FILTERED
     supplies = db.query(
         SupplierInventory.supplier_name,
         func.sum(SupplierInventory.total_amount).label('total_supply'),
@@ -412,10 +423,10 @@ def get_supplier_wise_summary(
         func.count(SupplierInventory.id).label('record_count')
     ).filter(
         SupplierInventory.supply_date == summary_date,
-        SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierInventory.tenant_id == tenant.id
     ).group_by(SupplierInventory.supplier_name).all()
     
-    # 🆕 TENANT FILTERED
+    # TENANT FILTERED
     returns = db.query(
         SupplierReturn.supplier_name,
         func.sum(SupplierReturn.total_amount).label('total_returns'),
@@ -423,7 +434,7 @@ def get_supplier_wise_summary(
         func.count(SupplierReturn.id).label('record_count')
     ).filter(
         SupplierReturn.return_date == summary_date,
-        SupplierReturn.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierReturn.tenant_id == tenant.id
     ).group_by(SupplierReturn.supplier_name).all()
     
     supplier_data = {}

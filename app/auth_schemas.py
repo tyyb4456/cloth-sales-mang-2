@@ -1,6 +1,6 @@
 # app/auth_schemas.py - Authentication Pydantic Schemas
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime, date
 
@@ -22,7 +22,7 @@ class TenantCreate(BaseModel):
     state: Optional[str] = None
     country: str = Field(default="Pakistan")
     
-    @validator('password')
+    @field_validator('password')
     def password_strength(cls, v):
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters')

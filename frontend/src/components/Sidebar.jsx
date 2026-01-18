@@ -1,4 +1,4 @@
-// frontend/src/components/Sidebar.jsx
+// frontend/src/components/Sidebar.jsx - UPDATED WITH RBAC
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -18,11 +18,13 @@ import {
   User,
   Building2,
   Package,
-  TruckIcon,
+  Truck,
   RotateCcw,
   ShoppingCart,
   FileText,
-  BarChart3
+  BarChart3,
+  Shield,
+  UserPlus
 } from 'lucide-react';
 
 import { useAuth } from '../App';
@@ -41,50 +43,178 @@ export default function Sidebar() {
     }
   };
 
+  // 🆕 Check if user is owner
+  const isOwner = user?.role === 'owner';
+  const isSalesperson = user?.role === 'salesperson';
+
+  // 🆕 RBAC-aware menu structure
   const menuItems = [
-    { path: '/Dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    // Dashboard - Always visible
+    { 
+      path: '/Dashboard', 
+      icon: LayoutDashboard, 
+      label: 'Dashboard',
+      show: true // Everyone can see
+    },
+    
+    // Core Operations - Visible to all roles
     { 
       section: 'Core Operations',
+      show: true,
       items: [
-        { path: '/varieties', icon: Package, label: 'Cloth Varieties' },
-        { path: '/supplier-inventory', icon: TruckIcon, label: 'Supplier Inventory' },
-        { path: '/supplier-returns', icon: RotateCcw, label: 'Supplier Returns' },
-        { path: '/sales', icon: ShoppingCart, label: 'Sales' },
-    
+        { 
+          path: '/varieties', 
+          icon: Package, 
+          label: 'Cloth Varieties',
+          show: true // Everyone
+        },
+        { 
+          path: '/supplier-inventory', 
+          icon: Truck, 
+          label: 'Supplier Inventory',
+          show: true // Everyone (Salesperson can view & add)
+        },
+        { 
+          path: '/supplier-returns', 
+          icon: RotateCcw, 
+          label: 'Supplier Returns',
+          show: isOwner // Owner only (involves money)
+        },
+        { 
+          path: '/sales', 
+          icon: ShoppingCart, 
+          label: 'Sales',
+          show: true // Everyone (Salesperson can view & add)
+        },
       ]
     },
+    
+    // Analytics & Reports - Owner only
     {
       section: 'Analytics & Reports',
+      show: isOwner,
       items: [
-        { path: '/reports', icon: FileText, label: 'Reports' },
-        { path: '/analytics', icon: BarChart3, label: 'Analytics Dashboard' },
-        { path: '/ProductDemandPredictor', icon: LineChart, label: 'Demand Predictor' },
-        { path: '/PredictionsDashboard', icon: LineChart, label: 'Predictions Dashboard' },
+        { 
+          path: '/reports', 
+          icon: FileText, 
+          label: 'Reports',
+          show: isOwner
+        },
+        { 
+          path: '/analytics', 
+          icon: BarChart3, 
+          label: 'Analytics Dashboard',
+          show: isOwner
+        },
+        { 
+          path: '/ProductDemandPredictor', 
+          icon: LineChart, 
+          label: 'Demand Predictor',
+          show: isOwner
+        },
+        { 
+          path: '/PredictionsDashboard', 
+          icon: LineChart, 
+          label: 'Predictions Dashboard',
+          show: isOwner
+        },
       ]
     },
+    
+    // AI & Advanced
     {
       section: 'AI & Advanced',
+      show: true,
       items: [
-        { path: '/AIChatbot', icon: MessageSquareText, label: 'AI Chatbot' },
-        { path: '/VoiceSalesComponent', icon: Mic, label: 'Voice Sales' },
+        { 
+          path: '/AIChatbot', 
+          icon: MessageSquareText, 
+          label: 'AI Chatbot',
+          show: isOwner // Owner only
+        },
+        { 
+          path: '/VoiceSalesComponent', 
+          icon: Mic, 
+          label: 'Voice Sales',
+          show: true // Everyone
+        },
       ]
     },
+    
+    // Financial - Owner only
     {
       section: 'Financial',
+      show: isOwner,
       items: [
-        { path: '/ExpenseTracker', icon: Wallet, label: 'Expense Tracker' },
-        { path: '/FinancialDashboard', icon: DollarSign, label: 'Financial Dashboard' },
-        { path: '/CustomerLoanDashboard', icon: HandCoins, label: 'Customer Loans' },
+        { 
+          path: '/ExpenseTracker', 
+          icon: Wallet, 
+          label: 'Expense Tracker',
+          show: isOwner
+        },
+        { 
+          path: '/FinancialDashboard', 
+          icon: DollarSign, 
+          label: 'Financial Dashboard',
+          show: isOwner
+        },
+        { 
+          path: '/CustomerLoanDashboard', 
+          icon: HandCoins, 
+          label: 'Customer Loans',
+          show: isOwner
+        },
       ]
     },
+    
+    // Inventory & Stock
     {
       section: 'Inventory & Stock',
+      show: true,
       items: [
-        { path: '/InventoryDashboard', icon: Boxes, label: 'Inventory Dashboard' },
-        { path: '/shopkeeper-stock', icon: Users, label: 'Shopkeeper Stock' },
+        { 
+          path: '/InventoryDashboard', 
+          icon: Boxes, 
+          label: 'Inventory Dashboard',
+          show: isOwner // Owner only (detailed inventory analysis)
+        },
+        { 
+          path: '/shopkeeper-stock', 
+          icon: Users, 
+          label: 'Shopkeeper Stock',
+          show: true // Everyone (Salesperson can manage)
+        },
+      ]
+    },
+
+    // 🆕 Team Management - Owner only
+    {
+      section: 'Administration',
+      show: isOwner,
+      items: [
+        { 
+          path: '/team', 
+          icon: UserPlus, 
+          label: 'Team Management',
+          show: isOwner
+        },
       ]
     }
   ];
+
+  // Filter menu items based on permissions
+  const getVisibleMenuItems = () => {
+    return menuItems.filter(item => item.show).map(item => {
+      if (item.section && item.items) {
+        // Filter section items
+        const visibleItems = item.items.filter(subItem => subItem.show);
+        return visibleItems.length > 0 ? { ...item, items: visibleItems } : null;
+      }
+      return item;
+    }).filter(Boolean);
+  };
+
+  const visibleMenuItems = getVisibleMenuItems();
 
   const handleNavigate = (path) => {
     navigate(path);
@@ -92,6 +222,8 @@ export default function Sidebar() {
   };
 
   const renderMenuItem = (item) => {
+    if (!item.show) return null;
+
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
     
@@ -137,7 +269,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
-          {menuItems.map((item, index) => {
+          {visibleMenuItems.map((item, index) => {
             if (item.section) {
               return (
                 <div key={index} className="mb-4">
@@ -158,13 +290,22 @@ export default function Sidebar() {
         {/* USER INFO & LOGOUT SECTION */}
         {sidebarOpen && (
           <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
-            {/* User Info */}
+            {/* User Info with Role Badge */}
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-                <User size={16} className="text-gray-500 dark:text-gray-400" />
-                <p className="text-sm font-medium truncate">
-                  {user?.full_name || 'User'}
-                </p>
+                {user?.role === 'owner' ? (
+                  <Shield size={16} className="text-purple-600" />
+                ) : (
+                  <User size={16} className="text-blue-600" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {user?.full_name || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                    {user?.role || 'User'}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                 <Building2 size={14} className="ml-0.5" />
@@ -229,7 +370,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
-          {menuItems.map((item, index) => {
+          {visibleMenuItems.map((item, index) => {
             if (item.section) {
               return (
                 <div key={index} className="mb-4">
@@ -247,13 +388,22 @@ export default function Sidebar() {
 
         {/* MOBILE USER INFO & LOGOUT */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
-          {/* User Info */}
+          {/* User Info with Role */}
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-              <User size={16} className="text-gray-500 dark:text-gray-400" />
-              <p className="text-sm font-medium truncate">
-                {user?.full_name || 'User'}
-              </p>
+              {user?.role === 'owner' ? (
+                <Shield size={16} className="text-purple-600" />
+              ) : (
+                <User size={16} className="text-blue-600" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {user?.full_name || 'User'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                  {user?.role || 'User'}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
               <Building2 size={14} className="ml-0.5" />

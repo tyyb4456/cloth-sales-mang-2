@@ -4,7 +4,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from database import init_db
-from routes import varieties, supplier, sales, reports, predictions, chatbot, expenses, voice_sales, inventory, customer_loans, shopkeeper_stock, auth_routes  
+from routes import (
+    varieties,
+    supplier,
+    sales,
+    reports,
+    predictions,
+    chatbot,
+    expenses,
+    voice_sales,
+    inventory,
+    customer_loans,
+    shopkeeper_stock,
+    auth_routes,
+    user_management,
+)
+ 
 
 
 @asynccontextmanager
@@ -47,6 +62,7 @@ app.include_router(inventory.router)
 app.include_router(customer_loans.router)
 app.include_router(shopkeeper_stock.router)
 app.include_router(auth_routes.router)
+app.include_router(user_management.router)
 
 @app.get("/")
 def root():

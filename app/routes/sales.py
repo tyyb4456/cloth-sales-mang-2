@@ -1,4 +1,4 @@
-# app/routes/sales.py - UPDATED WITH MULTI-TENANCY
+# app/routes/sales.py - UPDATED WITH RBAC PROTECTION
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -9,24 +9,34 @@ from decimal import Decimal
 from database import get_db
 from models import Sale, ClothVariety, SupplierInventory, InventoryMovement, StockType
 from schemas import SaleCreate, SaleResponse, DailySalesSummary, SalespersonSummary
-from routes.auth_routes import get_current_tenant  # 🆕 NEW
-from auth_models import Tenant  # 🆕 NEW
+from routes.auth_routes import get_current_tenant
+from auth_models import Tenant, User
+from routes.auth_routes import get_current_user
+
+# 🆕 IMPORT RBAC
+from rbac import require_permission, Permission
 
 router = APIRouter(prefix="/sales", tags=["Sales Management"])
 
 
+# ==================== CREATE SALE ====================
 @router.post("/", response_model=SaleResponse, status_code=status.HTTP_201_CREATED)
 def create_sale(
     sale: SaleCreate,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.ADD_SALES)),  # 🆕 RBAC
     db: Session = Depends(get_db)
 ):
-    """Record a new sale (tenant-isolated)"""
+    """
+    Record a new sale (tenant-isolated)
+    Required Permission: ADD_SALES
+    Allowed Roles: Owner, Salesperson
+    """
     
-    # 🆕 Check if variety exists FOR THIS TENANT
+    # Check if variety exists FOR THIS TENANT
     variety = db.query(ClothVariety).filter(
         ClothVariety.id == sale.variety_id,
-        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ClothVariety.tenant_id == tenant.id
     ).first()
     
     if not variety:
@@ -54,13 +64,12 @@ def create_sale(
                 detail=f"Insufficient stock! Available: {variety.current_stock}"
             )
         
-        # 🆕 Find supplier inventory (TENANT FILTERED)
         if hasattr(sale, 'supplier_inventory_id') and sale.supplier_inventory_id:
             supplier_inventory = db.query(SupplierInventory).filter(
                 SupplierInventory.id == sale.supplier_inventory_id,
                 SupplierInventory.variety_id == sale.variety_id,
                 SupplierInventory.quantity_remaining >= quantity,
-                SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+                SupplierInventory.tenant_id == tenant.id
             ).first()
             
             if not supplier_inventory:
@@ -69,11 +78,11 @@ def create_sale(
                     detail="Selected supplier inventory not found in your business"
                 )
         else:
-            # 🆕 FIFO with TENANT FILTER
+            # FIFO with TENANT FILTER
             supplier_inventory = db.query(SupplierInventory).filter(
                 SupplierInventory.variety_id == sale.variety_id,
                 SupplierInventory.quantity_remaining > 0,
-                SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+                SupplierInventory.tenant_id == tenant.id
             ).order_by(SupplierInventory.supply_date.asc()).first()
             
             if not supplier_inventory:
@@ -92,7 +101,7 @@ def create_sale(
         
         # Log inventory movement
         inventory_movement = InventoryMovement(
-            tenant_id=tenant.id,  # 🆕 SET TENANT
+            tenant_id=tenant.id,
             variety_id=sale.variety_id,
             movement_type='sale',
             quantity=-quantity,
@@ -105,7 +114,7 @@ def create_sale(
     
     # Create sale record
     db_sale = Sale(
-        tenant_id=tenant.id,  # 🆕 SET TENANT
+        tenant_id=tenant.id,
         salesperson_name=sale.salesperson_name,
         variety_id=sale.variety_id,
         quantity=quantity,
@@ -131,61 +140,84 @@ def create_sale(
     return db_sale
 
 
+# ==================== GET ALL SALES ====================
 @router.get("/", response_model=List[SaleResponse])
 def get_all_sales(
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SALES)),  # 🆕 RBAC
     db: Session = Depends(get_db)
 ):
-    """Get all sales records (tenant-isolated)"""
+    """
+    Get all sales records (tenant-isolated)
+    Required Permission: VIEW_SALES
+    Allowed Roles: Owner, Salesperson
+    """
     
     sales = db.query(Sale).filter(
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).all()
     
     return sales
 
 
+# ==================== GET SALES BY DATE ====================
 @router.get("/date/{sale_date}", response_model=List[SaleResponse])
 def get_sales_by_date(
     sale_date: date,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SALES)),  # 🆕 RBAC
     db: Session = Depends(get_db)
 ):
-    """Get all sales for a specific date (tenant-isolated)"""
+    """
+    Get all sales for a specific date (tenant-isolated)
+    Required Permission: VIEW_SALES
+    Allowed Roles: Owner, Salesperson
+    """
     
     sales = db.query(Sale).filter(
         Sale.sale_date == sale_date,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).all()
     
     return sales
 
 
+# ==================== GET SALES BY SALESPERSON ====================
 @router.get("/salesperson/{salesperson_name}", response_model=List[SaleResponse])
 def get_sales_by_salesperson(
     salesperson_name: str,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SALES)),  # 🆕 RBAC
     db: Session = Depends(get_db)
 ):
-    """Get all sales by a specific salesperson (tenant-isolated)"""
+    """
+    Get all sales by a specific salesperson (tenant-isolated)
+    Required Permission: VIEW_SALES
+    Allowed Roles: Owner, Salesperson
+    """
     
     sales = db.query(Sale).filter(
         Sale.salesperson_name == salesperson_name,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).all()
     
     return sales
 
 
+# ==================== GET DAILY SALES SUMMARY ====================
 @router.get("/daily-summary/{sale_date}", response_model=DailySalesSummary)
 def get_daily_sales_summary(
     sale_date: date,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SALES)),  # 🆕 RBAC
     db: Session = Depends(get_db)
 ):
-    """Get sales summary for a specific date (tenant-isolated)"""
+    """
+    Get sales summary for a specific date (tenant-isolated)
+    Required Permission: VIEW_SALES
+    Allowed Roles: Owner, Salesperson
+    """
     
-    # 🆕 TENANT FILTERED
     result = db.query(
         func.sum(Sale.selling_price * Sale.quantity).label('total_sales'),
         func.sum(Sale.profit).label('total_profit'),
@@ -193,7 +225,7 @@ def get_daily_sales_summary(
         func.count(Sale.id).label('sales_count')
     ).filter(
         Sale.sale_date == sale_date,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).first()
     
     total_sales = result.total_sales if result.total_sales else Decimal('0.00')
@@ -210,16 +242,21 @@ def get_daily_sales_summary(
     )
 
 
+# ==================== GET SALESPERSON SUMMARY ====================
 @router.get("/salesperson-summary/{salesperson_name}/{sale_date}", response_model=SalespersonSummary)
 def get_salesperson_summary(
     salesperson_name: str,
     sale_date: date,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SALES)),  # 🆕 RBAC
     db: Session = Depends(get_db)
 ):
-    """Get sales summary for a specific salesperson (tenant-isolated)"""
+    """
+    Get sales summary for a specific salesperson (tenant-isolated)
+    Required Permission: VIEW_SALES
+    Allowed Roles: Owner, Salesperson
+    """
     
-    # 🆕 TENANT FILTERED
     result = db.query(
         func.sum(Sale.selling_price * Sale.quantity).label('total_sales'),
         func.sum(Sale.profit).label('total_profit'),
@@ -228,7 +265,7 @@ def get_salesperson_summary(
     ).filter(
         Sale.salesperson_name == salesperson_name,
         Sale.sale_date == sale_date,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).first()
     
     total_sales = result.total_sales if result.total_sales else Decimal('0.00')
@@ -246,18 +283,23 @@ def get_salesperson_summary(
     )
 
 
+# ==================== DELETE SALE (OWNER ONLY) ====================
 @router.delete("/{sale_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_sale(
     sale_id: int,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.DELETE_SALES)),  # 🆕 RBAC - OWNER ONLY
     db: Session = Depends(get_db)
 ):
-    """Delete a sale record (tenant-isolated)"""
+    """
+    Delete a sale record (tenant-isolated)
+    Required Permission: DELETE_SALES
+    Allowed Roles: Owner ONLY
+    """
     
-    # 🆕 TENANT FILTERED
     sale = db.query(Sale).filter(
         Sale.id == sale_id,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).first()
     
     if not sale:
@@ -268,27 +310,25 @@ def delete_sale(
     
     # Restore inventory if from new stock
     if sale.stock_type == StockType.NEW_STOCK and sale.supplier_inventory_id:
-        # 🆕 TENANT FILTERED
         supplier_inventory = db.query(SupplierInventory).filter(
             SupplierInventory.id == sale.supplier_inventory_id,
-            SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            SupplierInventory.tenant_id == tenant.id
         ).first()
         
         if supplier_inventory:
             supplier_inventory.quantity_used -= sale.quantity
             supplier_inventory.quantity_remaining += sale.quantity
         
-        # 🆕 TENANT FILTERED
         variety = db.query(ClothVariety).filter(
             ClothVariety.id == sale.variety_id,
-            ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            ClothVariety.tenant_id == tenant.id
         ).first()
         
         if variety:
             variety.current_stock += sale.quantity
             
             inventory_movement = InventoryMovement(
-                tenant_id=tenant.id,  # 🆕 SET TENANT
+                tenant_id=tenant.id,
                 variety_id=sale.variety_id,
                 movement_type='sale_reversal',
                 quantity=sale.quantity,
@@ -306,18 +346,23 @@ def delete_sale(
     return None
 
 
+# ==================== GET PRICE OPTIONS ====================
 @router.get("/price-options/{variety_id}")
 def get_price_options(
     variety_id: int,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 NEW
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_INVENTORY)),  # 🆕 RBAC
     db: Session = Depends(get_db)
 ):
-    """Get available price options for a variety (tenant-isolated)"""
+    """
+    Get available price options for a variety (tenant-isolated)
+    Required Permission: VIEW_INVENTORY
+    Allowed Roles: Owner, Salesperson
+    """
     
-    # 🆕 TENANT FILTERED
     variety = db.query(ClothVariety).filter(
         ClothVariety.id == variety_id,
-        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ClothVariety.tenant_id == tenant.id
     ).first()
     
     if not variety:
@@ -326,11 +371,10 @@ def get_price_options(
             detail=f"Variety not found in your business"
         )
     
-    # 🆕 TENANT FILTERED
     price_options = db.query(SupplierInventory).filter(
         SupplierInventory.variety_id == variety_id,
         SupplierInventory.quantity_remaining > 0,
-        SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        SupplierInventory.tenant_id == tenant.id
     ).order_by(SupplierInventory.supply_date.desc()).all()
     
     return [

@@ -7,6 +7,7 @@ from typing import List, Optional
 from datetime import datetime
 from database import get_db
 from chatbot_engine import BusinessChatbot, ChatbotTools
+from rbac import require_permission, Permission
 
 router = APIRouter(prefix="/chatbot", tags=["AI Chatbot"])
 

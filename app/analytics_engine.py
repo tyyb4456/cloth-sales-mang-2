@@ -5,6 +5,9 @@ from typing import List, Dict, Tuple, Optional
 from decimal import Decimal
 from collections import defaultdict
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Try to import sklearn - use advanced ML if available
 try:
@@ -14,8 +17,8 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    print("⚠️ Warning: scikit-learn not installed. Using basic linear regression.")
-    print("   Install with: pip install scikit-learn")
+    logger.info("Warning: scikit-learn not installed. Using basic linear regression.")
+    logger.info("Install with: pip install scikit-learn")
 
 
 class AnalyticsEngine:
@@ -74,6 +77,7 @@ class AnalyticsEngine:
         
         # Use polynomial features if requested (for non-linear trends)
         if use_polynomial and degree > 1:
+            logger.info("using polynomial for non linear trends")
             poly = PolynomialFeatures(degree=degree)
             X_poly = poly.fit_transform(X)
             model = LinearRegression()

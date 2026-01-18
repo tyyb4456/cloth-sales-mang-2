@@ -1,4 +1,4 @@
-# app/routes/shopkeeper_stock.py - FULLY UPDATED WITH MULTI-TENANCY
+# app/routes/shopkeeper_stock.py - FULLY UPDATED WITH MULTI-TENANCY AND RBAC
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -15,8 +15,9 @@ from schemas import (
     ShopkeeperReturnCreate,
     ShopkeeperStockSummary
 )
-from routes.auth_routes import get_current_tenant  # 🆕 NEW IMPORT
-from auth_models import Tenant  # 🆕 NEW IMPORT
+from routes.auth_routes import get_current_tenant
+from auth_models import Tenant, User
+from rbac import require_permission, Permission  # 🆕 RBAC IMPORTS
 
 router = APIRouter(prefix="/shopkeeper-stock", tags=["Shopkeeper Stock Management"])
 
@@ -24,16 +25,17 @@ router = APIRouter(prefix="/shopkeeper-stock", tags=["Shopkeeper Stock Managemen
 @router.post("/issue", response_model=ShopkeeperStockResponse, status_code=status.HTTP_201_CREATED)
 def issue_stock_to_shopkeeper(
     stock: ShopkeeperStockCreate,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.MANAGE_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
     """
-    Issue stock to a shopkeeper (consignment/stock-on-credit) - tenant-isolated
+    Issue stock to a shopkeeper (consignment/stock-on-credit) - tenant-isolated, requires MANAGE_SHOPKEEPER_STOCK permission
     """
-    # 🆕 Verify variety exists FOR THIS TENANT
+    # Verify variety exists FOR THIS TENANT
     variety = db.query(ClothVariety).filter(
         ClothVariety.id == stock.variety_id,
-        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ClothVariety.tenant_id == tenant.id
     ).first()
     
     if not variety:
@@ -56,11 +58,11 @@ def issue_stock_to_shopkeeper(
     supplier_inventory_id = None
     
     if stock.deducted_from_inventory:
-        # 🆕 Find oldest supplier inventory WITH TENANT FILTER
+        # Find oldest supplier inventory WITH TENANT FILTER
         supplier_inventory = db.query(SupplierInventory).filter(
             SupplierInventory.variety_id == stock.variety_id,
             SupplierInventory.quantity_remaining > 0,
-            SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            SupplierInventory.tenant_id == tenant.id
         ).order_by(SupplierInventory.supply_date.asc()).first()
         
         if not supplier_inventory:
@@ -83,7 +85,7 @@ def issue_stock_to_shopkeeper(
     
     # Create shopkeeper stock record
     db_stock = ShopkeeperStock(
-        tenant_id=tenant.id,  # 🆕 SET TENANT
+        tenant_id=tenant.id,
         shopkeeper_name=stock.shopkeeper_name,
         shopkeeper_phone=stock.shopkeeper_phone,
         variety_id=stock.variety_id,
@@ -106,7 +108,7 @@ def issue_stock_to_shopkeeper(
         
         # Log inventory movement
         inventory_movement = InventoryMovement(
-            tenant_id=tenant.id,  # 🆕 SET TENANT
+            tenant_id=tenant.id,
             variety_id=stock.variety_id,
             movement_type='shopkeeper_issue',
             quantity=-quantity_decimal,
@@ -127,14 +129,15 @@ def issue_stock_to_shopkeeper(
 @router.get("/", response_model=List[ShopkeeperStockResponse])
 def get_all_shopkeeper_stock(
     shopkeeper_name: Optional[str] = None,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get all shopkeeper stock records (tenant-isolated), optionally filtered by shopkeeper name"""
+    """Get all shopkeeper stock records (tenant-isolated), optionally filtered by shopkeeper name, requires VIEW_SHOPKEEPER_STOCK permission"""
     
-    # 🆕 Start with tenant filter
+    # Start with tenant filter
     query = db.query(ShopkeeperStock).filter(
-        ShopkeeperStock.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ShopkeeperStock.tenant_id == tenant.id
     )
     
     if shopkeeper_name:
@@ -149,15 +152,16 @@ def get_all_shopkeeper_stock(
 @router.get("/{stock_id}", response_model=ShopkeeperStockResponse)
 def get_shopkeeper_stock(
     stock_id: int,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get a specific shopkeeper stock record (tenant-isolated)"""
+    """Get a specific shopkeeper stock record (tenant-isolated), requires VIEW_SHOPKEEPER_STOCK permission"""
     
-    # 🆕 Get stock WITH TENANT FILTER
+    # Get stock WITH TENANT FILTER
     stock = db.query(ShopkeeperStock).filter(
         ShopkeeperStock.id == stock_id,
-        ShopkeeperStock.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ShopkeeperStock.tenant_id == tenant.id
     ).first()
     
     if not stock:
@@ -173,18 +177,19 @@ def get_shopkeeper_stock(
 def record_shopkeeper_sales(
     stock_id: int,
     sales: ShopkeeperSalesCreate,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.MANAGE_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
     """
-    Record sales made by shopkeeper (tenant-isolated)
+    Record sales made by shopkeeper (tenant-isolated), requires MANAGE_SHOPKEEPER_STOCK permission
     Updates quantity_sold and quantity_remaining
     """
     
-    # 🆕 Get stock WITH TENANT FILTER
+    # Get stock WITH TENANT FILTER
     stock = db.query(ShopkeeperStock).filter(
         ShopkeeperStock.id == stock_id,
-        ShopkeeperStock.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ShopkeeperStock.tenant_id == tenant.id
     ).first()
     
     if not stock:
@@ -226,18 +231,19 @@ def record_shopkeeper_sales(
 def record_shopkeeper_return(
     stock_id: int,
     return_item: ShopkeeperReturnCreate,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.MANAGE_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
     """
-    Record return from shopkeeper (tenant-isolated)
+    Record return from shopkeeper (tenant-isolated), requires MANAGE_SHOPKEEPER_STOCK permission
     Restores supplier inventory ONLY if stock was originally deducted
     """
     
-    # 🆕 Get stock WITH TENANT FILTER
+    # Get stock WITH TENANT FILTER
     stock = db.query(ShopkeeperStock).filter(
         ShopkeeperStock.id == stock_id,
-        ShopkeeperStock.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ShopkeeperStock.tenant_id == tenant.id
     ).first()
     
     if not stock:
@@ -271,10 +277,10 @@ def record_shopkeeper_return(
     
     # Restore supplier inventory if it was deducted (WITH TENANT CHECK)
     if stock.deducted_from_inventory and stock.supplier_inventory_id:
-        # 🆕 Verify supplier inventory belongs to same tenant
+        # Verify supplier inventory belongs to same tenant
         supplier_inventory = db.query(SupplierInventory).filter(
             SupplierInventory.id == stock.supplier_inventory_id,
-            SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            SupplierInventory.tenant_id == tenant.id
         ).first()
         
         if supplier_inventory:
@@ -283,10 +289,10 @@ def record_shopkeeper_return(
     
     # Restore variety stock if it was deducted
     if stock.deducted_from_inventory:
-        # 🆕 Verify variety belongs to same tenant
+        # Verify variety belongs to same tenant
         variety = db.query(ClothVariety).filter(
             ClothVariety.id == stock.variety_id,
-            ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            ClothVariety.tenant_id == tenant.id
         ).first()
         
         if variety:
@@ -294,7 +300,7 @@ def record_shopkeeper_return(
             
             # Log inventory movement
             inventory_movement = InventoryMovement(
-                tenant_id=tenant.id,  # 🆕 SET TENANT
+                tenant_id=tenant.id,
                 variety_id=stock.variety_id,
                 movement_type='shopkeeper_return',
                 quantity=quantity_decimal,
@@ -314,12 +320,13 @@ def record_shopkeeper_return(
 
 @router.get("/summary/by-shopkeeper")
 def get_shopkeeper_summary(
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get summary statistics grouped by shopkeeper (tenant-isolated)"""
+    """Get summary statistics grouped by shopkeeper (tenant-isolated), requires VIEW_SHOPKEEPER_STOCK permission"""
     
-    # 🆕 Aggregate WITH TENANT FILTER
+    # Aggregate WITH TENANT FILTER
     result = db.query(
         ShopkeeperStock.shopkeeper_name,
         func.count(ShopkeeperStock.id).label('total_records'),
@@ -328,7 +335,7 @@ def get_shopkeeper_summary(
         func.sum(ShopkeeperStock.quantity_returned).label('total_returned'),
         func.sum(ShopkeeperStock.quantity_remaining).label('total_remaining')
     ).filter(
-        ShopkeeperStock.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ShopkeeperStock.tenant_id == tenant.id
     ).group_by(ShopkeeperStock.shopkeeper_name).all()
     
     summaries = []
@@ -349,11 +356,12 @@ def get_shopkeeper_summary(
 def delete_shopkeeper_stock(
     stock_id: int,
     tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.MANAGE_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
     """
-    Delete a shopkeeper stock record (tenant-isolated)
-    ✅ FIXED: Restores FULL quantity_issued (not just remaining)
+    Delete a shopkeeper stock record (tenant-isolated), requires MANAGE_SHOPKEEPER_STOCK permission
+    FIXED: Restores FULL quantity_issued (not just remaining)
     """
     
     stock = db.query(ShopkeeperStock).filter(
@@ -367,7 +375,7 @@ def delete_shopkeeper_stock(
             detail=f"Stock record with ID {stock_id} not found in your business"
         )
     
-    # ✅ CRITICAL FIX: Calculate net quantity to restore
+    # CRITICAL FIX: Calculate net quantity to restore
     # quantity_issued - quantity_returned (returns were already added back!)
     # Example: Issued 50, Sold 20, Returned 30
     # - Return already added 30 back to inventory
@@ -382,7 +390,7 @@ def delete_shopkeeper_stock(
         ).first()
         
         if supplier_inventory:
-            # ✅ Restore full issued quantity
+            # Restore full issued quantity
             supplier_inventory.quantity_used -= restore_quantity
             supplier_inventory.quantity_remaining += restore_quantity
     
@@ -394,7 +402,7 @@ def delete_shopkeeper_stock(
         ).first()
         
         if variety:
-            # ✅ Restore full issued quantity
+            # Restore full issued quantity
             variety.current_stock += restore_quantity
             
             # Log inventory movement
@@ -417,14 +425,14 @@ def delete_shopkeeper_stock(
     return None
 
 
-# 🆕 NEW ENDPOINT: Get shopkeeper stock by variety (tenant-isolated)
 @router.get("/by-variety/{variety_id}", response_model=List[ShopkeeperStockResponse])
 def get_shopkeeper_stock_by_variety(
     variety_id: int,
     tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get all shopkeeper stock for a specific variety (tenant-isolated)"""
+    """Get all shopkeeper stock for a specific variety (tenant-isolated), requires VIEW_SHOPKEEPER_STOCK permission"""
     
     # Verify variety exists for this tenant
     variety = db.query(ClothVariety).filter(
@@ -446,14 +454,14 @@ def get_shopkeeper_stock_by_variety(
     return stocks
 
 
-# 🆕 NEW ENDPOINT: Get shopkeeper detailed summary (tenant-isolated)
 @router.get("/shopkeeper/{shopkeeper_name}/summary")
 def get_shopkeeper_detailed_summary(
     shopkeeper_name: str,
     tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get detailed summary for a specific shopkeeper (tenant-isolated)"""
+    """Get detailed summary for a specific shopkeeper (tenant-isolated), requires VIEW_SHOPKEEPER_STOCK permission"""
     
     # Get all stocks for this shopkeeper (tenant-filtered)
     stocks = db.query(ShopkeeperStock).filter(
@@ -511,13 +519,13 @@ def get_shopkeeper_detailed_summary(
     }
 
 
-# 🆕 NEW ENDPOINT: Get outstanding stock by shopkeeper (tenant-isolated)
 @router.get("/outstanding/list")
 def get_outstanding_stock(
     tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.VIEW_SHOPKEEPER_STOCK)),  # 🆕 RBAC CHECK
     db: Session = Depends(get_db)
 ):
-    """Get all outstanding (unsold/unreturned) stock by shopkeeper (tenant-isolated)"""
+    """Get all outstanding (unsold/unreturned) stock by shopkeeper (tenant-isolated), requires VIEW_SHOPKEEPER_STOCK permission"""
     
     stocks = db.query(ShopkeeperStock).filter(
         ShopkeeperStock.quantity_remaining > 0,

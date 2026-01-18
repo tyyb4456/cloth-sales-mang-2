@@ -1,6 +1,6 @@
 // frontend/src/components/LandingAuthPage.jsx
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../App';
 import {
   Store, TrendingUp, Users, BarChart3,
@@ -45,7 +45,7 @@ export default function LandingAuthPage() {
       if (response.ok) {
         const data = await response.json();
         login(data.access_token, data.refresh_token, data.user, data.tenant);
-        navigate('/varieties'); // Changed to /varieties as your first page
+        navigate('/varieties');
       } else {
         const error = await response.json();
         alert(error.detail || 'Login failed');
@@ -105,7 +105,7 @@ export default function LandingAuthPage() {
 
   if (!showAuth) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-white flex flex-col">
 
         <nav className="border-b border-gray-200 bg-white">
           <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
@@ -122,68 +122,101 @@ export default function LandingAuthPage() {
           </div>
         </nav>
 
-        <div className="max-w-6xl mx-auto px-6 py-24">
-          <div className="max-w-3xl">
-            <div className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full mb-6">
-              7-day free trial
+        <div className="flex-1">
+          <div className="max-w-6xl mx-auto px-6 py-24">
+            <div className="max-w-3xl">
+              <div className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full mb-6">
+                7-day free trial
+              </div>
+
+              <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                Inventory and sales management for cloth shops
+              </h1>
+
+              <p className="text-xl text-gray-600 mb-10 leading-relaxed">
+                Track sales, manage inventory, and analyze performance with enterprise-grade tools built for retail.
+              </p>
+
+              <button
+                onClick={() => {
+                  setShowAuth(true);
+                  setAuthMode('register');
+                }}
+                className="px-6 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition"
+              >
+                Get Started
+              </button>
             </div>
+          </div>
 
-            <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
-              Inventory and sales management for cloth shops
-            </h1>
+          <div className="border-t border-gray-200 bg-gray-50">
+            <div className="max-w-6xl mx-auto px-6 py-20">
+              <div className="grid md:grid-cols-3 gap-12">
 
-            <p className="text-xl text-gray-600 mb-10 leading-relaxed">
-              Track sales, manage inventory, and analyze performance with enterprise-grade tools built for retail.
-            </p>
+                <div>
+                  <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
+                    <TrendingUp className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Sales Tracking</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Monitor transactions, calculate margins, and manage team performance in real time.
+                  </p>
+                </div>
 
-            <button
-              onClick={() => {
-                setShowAuth(true);
-                setAuthMode('register');
-              }}
-              className="px-6 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition"
-            >
-              Get Started
-            </button>
+                <div>
+                  <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
+                    <BarChart3 className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Understand product performance, identify trends, and make data-driven decisions.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
+                    <Users className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Team Access</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Add users, assign roles, and collaborate across locations with secure access controls.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-200 bg-gray-50">
-          <div className="max-w-6xl mx-auto px-6 py-20">
-            <div className="grid md:grid-cols-3 gap-12">
-
-              <div>
-                <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
-                  <TrendingUp className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Sales Tracking</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Monitor transactions, calculate margins, and manage team performance in real time.
-                </p>
-              </div>
-
-              <div>
-                <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
-                  <BarChart3 className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Understand product performance, identify trends, and make data-driven decisions.
-                </p>
-              </div>
-
-              <div>
-                <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Team Access</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Add users, assign roles, and collaborate across locations with secure access controls.
-                </p>
+        {/* 🆕 NEW: Footer with Privacy & Terms Links */}
+        <footer className="border-t border-gray-200 bg-white py-6">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <p className="text-sm text-gray-500">
+                © 2025 ShopSmart. All rights reserved.
+              </p>
+              <div className="flex items-center gap-6">
+                <Link
+                  to="/privacy"
+                  className="text-sm text-gray-600 hover:text-gray-900 transition"
+                >
+                  Privacy Policy
+                </Link>
+                <Link
+                  to="/terms"
+                  className="text-sm text-gray-600 hover:text-gray-900 transition"
+                >
+                  Terms & Conditions
+                </Link>
+                <a
+                  href="mailto:igntayyab@gmail.com"
+                  className="text-sm text-gray-600 hover:text-gray-900 transition"
+                >
+                  Contact Us
+                </a>
               </div>
             </div>
           </div>
-        </div>
+        </footer>
       </div>
     );
   }
@@ -249,7 +282,6 @@ export default function LandingAuthPage() {
               />
             </div>
 
-            {/* Add this after password input */}
             <div className="text-right">
               <button
                 type="button"
@@ -384,7 +416,17 @@ export default function LandingAuthPage() {
               />
             </div>
 
-
+            {/* 🆕 NEW: Terms & Privacy Agreement */}
+            <div className="text-xs text-gray-600 text-center">
+              By signing up, you agree to our{' '}
+              <Link to="/terms" className="text-blue-600 hover:underline">
+                Terms & Conditions
+              </Link>
+              {' '}and{' '}
+              <Link to="/privacy" className="text-blue-600 hover:underline">
+                Privacy Policy
+              </Link>
+            </div>
 
             <button
               onClick={handleRegister}
