@@ -10,7 +10,6 @@ import Varieties from './pages/Varieties';
 import SupplierInventory from './pages/SupplierInventory';
 import SupplierReturns from './pages/SupplierReturns';
 import Sales from './pages/Sales';
-import Reports from './pages/Reports';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import PredictionsDashboard from './components/PredictionsDashboard';
 import ProductDemandPredictor from './components/ProductDemandPredictor';
@@ -18,7 +17,6 @@ import AIChatbot from './components/AIChatbot';
 import ExpenseTracker from './components/Expenses';
 import FinancialDashboard from './components/FinancialDashboard';
 import VoiceSalesComponent from './components/VoiceSalesComponent';
-import InventoryDashboard from './components/InventoryDashboard';
 import CustomerLoanDashboard from './components/CustomerLoanDashboard';
 import ShopkeeperStockManagement from './components/ShopkeeperStockManagement';
 import LandingAuthPage from './components/LandingAuthPage';
@@ -31,6 +29,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 
 import TeamManagement from './pages/TeamManagement';
+
 
 
 
@@ -171,12 +170,6 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/reports" element={
-            <ProtectedRoute>
-              <Layout><Reports /></Layout>
-            </ProtectedRoute>
-          } />
-
           <Route path="/analytics" element={
             <ProtectedRoute>
               <Layout><AnalyticsDashboard /></Layout>
@@ -216,12 +209,6 @@ function App() {
           <Route path="/VoiceSalesComponent" element={
             <ProtectedRoute>
               <Layout><VoiceSalesComponent /></Layout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/InventoryDashboard" element={
-            <ProtectedRoute>
-              <Layout><InventoryDashboard /></Layout>
             </ProtectedRoute>
           } />
 

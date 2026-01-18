@@ -95,12 +95,6 @@ export default function Sidebar() {
       show: isOwner,
       items: [
         { 
-          path: '/reports', 
-          icon: FileText, 
-          label: 'Reports',
-          show: isOwner
-        },
-        { 
           path: '/analytics', 
           icon: BarChart3, 
           label: 'Analytics Dashboard',
@@ -172,12 +166,6 @@ export default function Sidebar() {
       section: 'Inventory & Stock',
       show: true,
       items: [
-        { 
-          path: '/InventoryDashboard', 
-          icon: Boxes, 
-          label: 'Inventory Dashboard',
-          show: isOwner // Owner only (detailed inventory analysis)
-        },
         { 
           path: '/shopkeeper-stock', 
           icon: Users, 

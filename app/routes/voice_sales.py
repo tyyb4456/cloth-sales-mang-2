@@ -15,7 +15,7 @@ load_dotenv()
 
 # Import Gemini for AI validation
 try:
-    import google.generativeai as genai
+    import google.genai as genai
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False

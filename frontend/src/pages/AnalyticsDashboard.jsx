@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Award, AlertCircle, Users } from 'lucide-react';
-import api from '../api/api'; // ✅ USING AUTHENTICATED API
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Award, AlertCircle, Users, Calendar } from 'lucide-react';
+import api from '../api/api';
+import InventoryAnalyticsDashboard from '../components/InventoryAnalyticsDashboard';
+
 
 const getItemCount = (quantity, unit) => {
   if (unit === 'meters' || unit === 'yards') return 1;
@@ -14,18 +16,25 @@ const getDateRange = (days) => {
   const end = new Date();
   const start = new Date();
   start.setDate(start.getDate() - days + 1);
-  
+
   start.setHours(0, 0, 0, 0);
   end.setHours(23, 59, 59, 999);
-  
+
   return { startDate: start, endDate: end };
 };
 
-const fetchRealAnalytics = async (days) => {
-  try {
-    const { startDate, endDate } = getDateRange(days);
+const getCustomDateRange = (startDateStr, endDateStr) => {
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
 
-    // ✅ FIXED: Using authenticated API
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+
+  return { startDate: start, endDate: end };
+};
+
+const fetchAnalyticsByDateRange = async (startDate, endDate) => {
+  try {
     const [salesRes, inventoryRes, returnsRes, varietiesRes] = await Promise.all([
       api.get('/sales/'),
       api.get('/supplier/inventory'),
@@ -63,11 +72,11 @@ const fetchRealAnalytics = async (days) => {
       varietyMap[v.id] = v;
     });
 
-    const totalRevenue = sales.reduce((sum, sale) => 
+    const totalRevenue = sales.reduce((sum, sale) =>
       sum + (parseFloat(sale.selling_price) * parseFloat(sale.quantity)), 0
     );
 
-    const totalProfit = sales.reduce((sum, sale) => 
+    const totalProfit = sales.reduce((sum, sale) =>
       sum + parseFloat(sale.profit), 0
     );
 
@@ -81,6 +90,7 @@ const fetchRealAnalytics = async (days) => {
     const avgOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
+    const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
     const midPoint = Math.floor(days / 2);
     const midDate = new Date(startDate);
     midDate.setDate(midDate.getDate() + midPoint);
@@ -100,19 +110,19 @@ const fetchRealAnalytics = async (days) => {
       : 0;
 
     const salesByDate = {};
-    
+
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
       const dateKey = `${year}-${month}-${day}`;
-      
-      salesByDate[dateKey] = { 
+
+      salesByDate[dateKey] = {
         date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         dateKey: dateKey,
-        revenue: 0, 
-        profit: 0, 
-        sales: 0 
+        revenue: 0,
+        profit: 0,
+        sales: 0
       };
     }
 
@@ -121,14 +131,14 @@ const fetchRealAnalytics = async (days) => {
       if (salesByDate[dateKey]) {
         const saleRevenue = parseFloat(sale.selling_price) * parseFloat(sale.quantity);
         const saleProfit = parseFloat(sale.profit);
-        
+
         salesByDate[dateKey].revenue += saleRevenue;
         salesByDate[dateKey].profit += saleProfit;
         salesByDate[dateKey].sales += 1;
       }
     });
 
-    const salesData = Object.values(salesByDate).sort((a, b) => 
+    const salesData = Object.values(salesByDate).sort((a, b) =>
       new Date(a.dateKey) - new Date(b.dateKey)
     );
 
@@ -266,7 +276,10 @@ const fetchRealAnalytics = async (days) => {
 };
 
 const AnalyticsDashboard = () => {
+  const [rangeMode, setRangeMode] = useState('preset'); // 'preset' or 'custom'
   const [timeRange, setTimeRange] = useState(30);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -276,7 +289,17 @@ const AnalyticsDashboard = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchRealAnalytics(timeRange);
+        let dateRange;
+        if (rangeMode === 'preset') {
+          dateRange = getDateRange(timeRange);
+        } else if (rangeMode === 'custom' && customStartDate && customEndDate) {
+          dateRange = getCustomDateRange(customStartDate, customEndDate);
+        } else {
+          setLoading(false);
+          return;
+        }
+
+        const data = await fetchAnalyticsByDateRange(dateRange.startDate, dateRange.endDate);
         setAnalytics(data);
       } catch (err) {
         setError('Failed to load analytics data. Please check if the API is running.');
@@ -286,7 +309,7 @@ const AnalyticsDashboard = () => {
       }
     };
     loadData();
-  }, [timeRange]);
+  }, [timeRange, rangeMode, customStartDate, customEndDate]);
 
   if (loading) {
     return (
@@ -350,25 +373,101 @@ const AnalyticsDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Header with Range Selector */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
             <p className="text-gray-600">Real-time business insights and performance metrics</p>
           </div>
-          <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1">
-            {[7, 30, 90].map((days) => (
+
+          <div className="flex items-center gap-3">
+            {/* Mode Toggle */}
+            <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1">
               <button
-                key={days}
-                onClick={() => setTimeRange(days)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                  timeRange === days ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                onClick={() => setRangeMode('preset')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${rangeMode === 'preset' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
-                {days} Days
+                Preset
               </button>
-            ))}
+              <button
+                onClick={() => setRangeMode('custom')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 ${rangeMode === 'custom' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+              >
+                <Calendar size={16} />
+                Custom Range
+              </button>
+            </div>
+
+            {/* Preset Buttons */}
+            {rangeMode === 'preset' && (
+              <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1">
+                {[7, 30, 90].map((days) => (
+                  <button
+                    key={days}
+                    onClick={() => setTimeRange(days)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${timeRange === days ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                  >
+                    {days} Days
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Custom Date Range Selector */}
+        {rangeMode === 'custom' && (
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const lastWeek = new Date();
+                    lastWeek.setDate(lastWeek.getDate() - 7);
+                    setCustomStartDate(lastWeek.toISOString().split('T')[0]);
+                    setCustomEndDate(today.toISOString().split('T')[0]);
+                  }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
+                >
+                  Last Week
+                </button>
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                    setCustomStartDate(firstDay.toISOString().split('T')[0]);
+                    setCustomEndDate(today.toISOString().split('T')[0]);
+                  }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
+                >
+                  This Month
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <KPICard
@@ -412,9 +511,9 @@ const AnalyticsDashboard = () => {
             <ResponsiveContainer width="100%" height={350}>
               <LineChart data={analytics.salesData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#6b7280" 
+                <XAxis
+                  dataKey="date"
+                  stroke="#6b7280"
                   style={{ fontSize: '12px' }}
                   angle={timeRange > 30 ? -45 : 0}
                   textAnchor={timeRange > 30 ? "end" : "middle"}
@@ -431,19 +530,19 @@ const AnalyticsDashboard = () => {
                   formatter={(value) => `₹${value.toLocaleString()}`}
                 />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#765496" 
-                  strokeWidth={2} 
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#765496"
+                  strokeWidth={2}
                   name="Revenue (₹)"
                   dot={timeRange <= 30}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="profit" 
-                  stroke="#bf5095" 
-                  strokeWidth={2} 
+                <Line
+                  type="monotone"
+                  dataKey="profit"
+                  stroke="#bf5095"
+                  strokeWidth={2}
                   name="Profit (₹)"
                   dot={timeRange <= 30}
                 />
@@ -793,9 +892,109 @@ const AnalyticsDashboard = () => {
               )}
             </div>
           </div>
+
         </div>
+        {/* Daily Breakdown Table */}
+        {analytics.salesData && analytics.salesData.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Daily Breakdown</h2>
+              <p className="text-sm text-gray-600">Day-by-day performance</p>
+            </div>
+
+            <div className="overflow-x-auto max-h-96">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Date</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-600 uppercase">Transactions</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase">Revenue</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase">Profit</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase">Profit Margin</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {analytics.salesData.map((day, idx) => {
+                    const profitMargin = day.revenue > 0 ? (day.profit / day.revenue) * 100 : 0;
+                    return (
+                      <tr key={idx} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-medium text-gray-900">
+                            {day.date}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                            {day.sales}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-sm font-semibold text-gray-900">
+                            ₹{day.revenue.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-sm font-semibold text-green-600">
+                            ₹{day.profit.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-green-500 h-2 rounded-full transition-all"
+                                style={{ width: `${Math.min(profitMargin, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-gray-700 w-12 text-right">
+                              {profitMargin.toFixed(1)}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Summary Footer */}
+            <div className="p-4 bg-gray-50 border-t border-gray-200">
+              <div className="grid grid-cols-4 gap-4 text-center">
+                <div>
+                  <p className="text-xs text-gray-600 font-medium">Total Days</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {analytics.salesData.length}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 font-medium">Total Transactions</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {analytics.salesData.reduce((sum, d) => sum + d.sales, 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 font-medium">Total Revenue</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    ₹{analytics.salesData.reduce((sum, d) => sum + d.revenue, 0).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 font-medium">Total Profit</p>
+                  <p className="text-lg font-bold text-green-600">
+                    ₹{analytics.salesData.reduce((sum, d) => sum + d.profit, 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* <div className="mt-12">
+          <InventoryAnalyticsDashboard timeRange={timeRange} />
+        </div> */}
       </div>
     </div>
+
   );
 };
 
