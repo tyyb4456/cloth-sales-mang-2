@@ -22,34 +22,7 @@ const getDateRange = (days) => {
 
 const formatCurrency = (value) => `₹${value.toLocaleString()}`;
 
-// ==================== METRIC CARD COMPONENT ====================
-const MetricCard = ({ title, value, subtitle, icon: Icon, trend, color }) => (
-  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-    <div className="flex items-start justify-between mb-4">
-      <div className="flex-1">
-        <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-        <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
-        {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
-      </div>
-      <div className={`p-3 rounded-lg ${color}`}>
-        <Icon className="w-6 h-6 text-white" />
-      </div>
-    </div>
-    {trend !== undefined && (
-      <div className="flex items-center gap-1">
-        {trend >= 0 ? (
-          <ArrowUpRight className="w-4 h-4 text-green-600" />
-        ) : (
-          <ArrowDownRight className="w-4 h-4 text-red-600" />
-        )}
-        <span className={`text-sm font-medium ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-          {Math.abs(trend).toFixed(1)}%
-        </span>
-        <span className="text-sm text-gray-500">vs last period</span>
-      </div>
-    )}
-  </div>
-);
+
 
 // ==================== INVENTORY MOVEMENT CHART ====================
 const InventoryMovementChart = ({ data }) => (
@@ -547,42 +520,11 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
     <div className="space-y-6">
       {/* Section Header */}
       <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">📦 Inventory Analytics</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Inventory Analytics</h2>
         <p className="text-gray-600">Comprehensive stock movement and utilization insights</p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          title="Total Supplied"
-          value={analyticsData.metrics.totalSupplied.toFixed(1)}
-          subtitle={formatCurrency(analyticsData.metrics.totalSuppliedValue)}
-          icon={Truck}
-          trend={analyticsData.metrics.suppliedTrend}
-          color="bg-blue-600"
-        />
-        <MetricCard
-          title="Stock Used"
-          value={analyticsData.metrics.totalUsed.toFixed(1)}
-          subtitle={`${analyticsData.metrics.utilizationRate.toFixed(1)}% utilization`}
-          icon={ShoppingCart}
-          color="bg-red-600"
-        />
-        <MetricCard
-          title="Returned"
-          value={analyticsData.metrics.totalReturned.toFixed(1)}
-          subtitle={`${analyticsData.metrics.returnRate.toFixed(1)}% return rate`}
-          icon={RefreshCw}
-          color="bg-orange-600"
-        />
-        <MetricCard
-          title="Remaining Stock"
-          value={analyticsData.metrics.totalRemaining.toFixed(1)}
-          subtitle="Available inventory"
-          icon={Package}
-          color="bg-green-600"
-        />
-      </div>
+   
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

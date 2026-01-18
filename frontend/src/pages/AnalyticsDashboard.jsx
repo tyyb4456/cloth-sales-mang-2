@@ -989,9 +989,9 @@ const AnalyticsDashboard = () => {
             </div>
           </div>
         )}
-        {/* <div className="mt-12">
+        <div className="mt-12">
           <InventoryAnalyticsDashboard timeRange={timeRange} />
-        </div> */}
+        </div>
       </div>
     </div>
 
