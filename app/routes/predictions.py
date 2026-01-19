@@ -1,4 +1,4 @@
-# app/routes/predictions.py - UPDATED WITH MULTI-TENANCY
+# app/routes/predictions.py - UPDATED WITH PROPHET INTEGRATION
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -11,8 +11,8 @@ from models import Sale, SupplierInventory, ClothVariety
 from analytics_engine import AnalyticsEngine
 from fastapi import HTTPException, status
 
-from routes.auth_routes import get_current_tenant  # 🆕 IMPORT
-from auth_models import Tenant  # 🆕 IMPORT
+from routes.auth_routes import get_current_tenant
+from auth_models import Tenant
 
 router = APIRouter(prefix="/predictions", tags=["Predictive Analytics"])
 
@@ -20,23 +20,26 @@ router = APIRouter(prefix="/predictions", tags=["Predictive Analytics"])
 @router.get("/revenue-forecast")
 def forecast_revenue(
     days_ahead: int = Query(30, ge=7, le=90, description="Days to forecast (7-90)"),
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
-    """Forecast future revenue based on historical sales data (tenant-isolated)"""
+    """
+    Forecast future revenue based on historical sales data (tenant-isolated)
+    🆕 NOW USES FACEBOOK PROPHET FOR ACCURATE TIME SERIES FORECASTING
+    """
     
     # Get historical sales data (last 90 days)
     end_date = date.today()
     start_date = end_date - timedelta(days=90)
     
-    # 🆕 Query daily sales aggregated WITH TENANT FILTER
+    # Query daily sales aggregated WITH TENANT FILTER
     daily_sales = db.query(
         Sale.sale_date,
         func.sum(Sale.selling_price * Sale.quantity).label('revenue')
     ).filter(
         Sale.sale_date >= start_date,
         Sale.sale_date <= end_date,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).group_by(Sale.sale_date).order_by(Sale.sale_date).all()
     
     # Prepare data for forecasting
@@ -48,7 +51,7 @@ def forecast_revenue(
         for sale in daily_sales
     ]
     
-    # Generate forecast
+    # 🆕 Generate forecast using Prophet (automatically falls back to sklearn if unavailable)
     forecast_result = AnalyticsEngine.forecast_revenue(historical_data, days_ahead)
     
     return {
@@ -56,11 +59,14 @@ def forecast_revenue(
         "forecast": forecast_result.get("forecast", []),
         "confidence": forecast_result.get("confidence", "low"),
         "r_squared": forecast_result.get("r_squared", 0),
+        "mae": forecast_result.get("mae", 0),
+        "rmse": forecast_result.get("rmse", 0),
         "summary": {
             "total_predicted_revenue": forecast_result.get("total_predicted", 0),
             "avg_daily_predicted": forecast_result.get("avg_daily_predicted", 0),
             "forecast_period_days": days_ahead
         },
+        "model_info": forecast_result.get("model_info", {}),
         "message": forecast_result.get("message")
     }
 
@@ -69,15 +75,18 @@ def forecast_revenue(
 def predict_product_demand(
     variety_id: int,
     days_ahead: int = Query(30, ge=7, le=90),
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
-    """Predict demand for a specific product (tenant-isolated)"""
+    """
+    Predict demand for a specific product (tenant-isolated)
+    🆕 NOW USES FACEBOOK PROPHET FOR QUANTITY PREDICTIONS
+    """
     
-    # 🆕 Check if variety exists FOR THIS TENANT
+    # Check if variety exists FOR THIS TENANT
     variety = db.query(ClothVariety).filter(
         ClothVariety.id == variety_id,
-        ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        ClothVariety.tenant_id == tenant.id
     ).first()
     
     if not variety:
@@ -90,7 +99,7 @@ def predict_product_demand(
     end_date = date.today()
     start_date = end_date - timedelta(days=90)
     
-    # 🆕 Get daily sales WITH TENANT FILTER
+    # Get daily sales WITH TENANT FILTER
     daily_sales = db.query(
         Sale.sale_date,
         func.sum(Sale.quantity).label('quantity_sold')
@@ -98,24 +107,28 @@ def predict_product_demand(
         Sale.variety_id == variety_id,
         Sale.sale_date >= start_date,
         Sale.sale_date <= end_date,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).group_by(Sale.sale_date).order_by(Sale.sale_date).all()
     
     if len(daily_sales) < 7:
         return {
+            "variety_id": variety_id,
             "variety_name": variety.name,
-            "message": "Insufficient sales history for this product",
-            "forecast": []
+            "message": "Insufficient sales history for this product (need at least 7 days)",
+            "forecast": [],
+            "confidence": "low"
         }
     
-    # Prepare data
+    # 🆕 Prepare data for Prophet (quantity prediction)
     historical_data = [
-        {"date": str(sale.sale_date), "revenue": float(sale.quantity_sold)}
+        {"date": str(sale.sale_date), "quantity": float(sale.quantity_sold)}
         for sale in daily_sales
     ]
     
-    # Generate forecast (using revenue field but it's actually quantity)
-    forecast_result = AnalyticsEngine.forecast_revenue(historical_data, days_ahead)
+    # 🆕 Generate forecast using Prophet for QUANTITY
+    forecast_result = AnalyticsEngine.forecast_product_demand_prophet(
+        historical_data, days_ahead
+    )
     
     # Calculate reorder point
     total_qty = sum(sale.quantity_sold for sale in daily_sales)
@@ -125,28 +138,24 @@ def predict_product_demand(
     return {
         "variety_id": variety_id,
         "variety_name": variety.name,
-        "forecast": [
-            {
-                "date": f["date"],
-                "predicted_quantity": int(f["predicted_revenue"]),
-                "confidence_level": f["confidence_level"]
-            }
-            for f in forecast_result["forecast"]
-        ],
+        "forecast": forecast_result["forecast"],
         "confidence": forecast_result["confidence"],
+        "r_squared": forecast_result.get("r_squared", 0),
         "analytics": {
             "avg_daily_sales": round(avg_daily_sales, 2),
-            "total_predicted_demand": int(forecast_result["total_predicted"]),
+            "total_predicted_demand": int(forecast_result.get("total_predicted", 0)),
             "reorder_point": reorder_point,
             "recommendation": f"Reorder when stock falls below {reorder_point} units"
-        }
+        },
+        "model_info": forecast_result.get("model_info", {}),
+        "message": forecast_result.get("message", "")
     }
 
 
 @router.get("/sales-trends")
 def analyze_sales_trends(
     days: int = Query(30, ge=7, le=180),
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
     """Analyze sales trends and patterns (tenant-isolated)"""
@@ -154,7 +163,7 @@ def analyze_sales_trends(
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
     
-    # 🆕 Get daily sales WITH TENANT FILTER
+    # Get daily sales WITH TENANT FILTER
     daily_sales = db.query(
         Sale.sale_date,
         func.sum(Sale.selling_price * Sale.quantity).label('revenue'),
@@ -163,7 +172,7 @@ def analyze_sales_trends(
     ).filter(
         Sale.sale_date >= start_date,
         Sale.sale_date <= end_date,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).group_by(Sale.sale_date).order_by(Sale.sale_date).all()
     
     if len(daily_sales) < 7:
@@ -182,7 +191,7 @@ def analyze_sales_trends(
     
     # Detect seasonality
     sales_data = [
-        {"date": sale.sale_date, "value": float(sale.revenue)}
+        {"date": sale.sale_date, "revenue": float(sale.revenue)}
         for sale in daily_sales
     ]
     seasonality = AnalyticsEngine.calculate_seasonality(sales_data)
@@ -216,7 +225,7 @@ def analyze_sales_trends(
 @router.get("/product-performance")
 def analyze_product_performance(
     days: int = Query(30, ge=7, le=180),
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
     """Analyze performance of all products (tenant-isolated)"""
@@ -224,7 +233,7 @@ def analyze_product_performance(
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
     
-    # 🆕 Get sales by variety WITH TENANT FILTER
+    # Get sales by variety WITH TENANT FILTER
     product_sales = db.query(
         Sale.variety_id,
         func.sum(Sale.selling_price * Sale.quantity).label('revenue'),
@@ -234,14 +243,14 @@ def analyze_product_performance(
     ).filter(
         Sale.sale_date >= start_date,
         Sale.sale_date <= end_date,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).group_by(Sale.variety_id).all()
     
-    # 🆕 Get variety details FOR THIS TENANT
+    # Get variety details FOR THIS TENANT
     varieties = {
         v.id: v.name 
         for v in db.query(ClothVariety).filter(
-            ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            ClothVariety.tenant_id == tenant.id
         ).all()
     }
     
@@ -296,7 +305,7 @@ def analyze_product_performance(
 @router.get("/smart-insights")
 def get_smart_insights(
     days: int = 30,
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
     """
@@ -307,11 +316,11 @@ def get_smart_insights(
         end_date = date.today()
         start_date = end_date - timedelta(days=days)
         
-        # 🆕 Fetch sales data WITH TENANT FILTER
+        # Fetch sales data WITH TENANT FILTER
         sales = db.query(Sale).filter(
             Sale.sale_date >= start_date,
             Sale.sale_date <= end_date,
-            Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            Sale.tenant_id == tenant.id
         ).all()
         
         # Format sales_data correctly with "revenue" key
@@ -323,11 +332,11 @@ def get_smart_insights(
             for sale in sales
         ]
         
-        # 🆕 Fetch inventory data WITH TENANT FILTER
+        # Fetch inventory data WITH TENANT FILTER
         inventories = db.query(SupplierInventory).filter(
             SupplierInventory.supply_date >= start_date,
             SupplierInventory.supply_date <= end_date,
-            SupplierInventory.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            SupplierInventory.tenant_id == tenant.id
         ).all()
         
         inventory_data = [
@@ -342,10 +351,10 @@ def get_smart_insights(
         # Calculate product performance
         product_stats = {}
         for sale in sales:
-            # 🆕 Get variety WITH TENANT FILTER
+            # Get variety WITH TENANT FILTER
             variety = db.query(ClothVariety).filter(
                 ClothVariety.id == sale.variety_id,
-                ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+                ClothVariety.tenant_id == tenant.id
             ).first()
             
             if not variety:
@@ -388,7 +397,7 @@ def get_smart_insights(
 
 @router.get("/reorder-recommendations")
 def get_reorder_recommendations(
-    tenant: Tenant = Depends(get_current_tenant),  # 🆕 MULTI-TENANT
+    tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
     """Get smart reorder recommendations for all products (tenant-isolated)"""
@@ -397,7 +406,7 @@ def get_reorder_recommendations(
     end_date = date.today()
     start_date = end_date - timedelta(days=30)
     
-    # 🆕 Get product sales WITH TENANT FILTER
+    # Get product sales WITH TENANT FILTER
     product_sales = db.query(
         Sale.variety_id,
         func.sum(Sale.quantity).label('total_quantity'),
@@ -405,14 +414,14 @@ def get_reorder_recommendations(
     ).filter(
         Sale.sale_date >= start_date,
         Sale.sale_date <= end_date,
-        Sale.tenant_id == tenant.id  # 🆕 TENANT FILTER
+        Sale.tenant_id == tenant.id
     ).group_by(Sale.variety_id).all()
     
-    # 🆕 Get variety details FOR THIS TENANT
+    # Get variety details FOR THIS TENANT
     varieties = {
         v.id: v 
         for v in db.query(ClothVariety).filter(
-            ClothVariety.tenant_id == tenant.id  # 🆕 TENANT FILTER
+            ClothVariety.tenant_id == tenant.id
         ).all()
     }
     

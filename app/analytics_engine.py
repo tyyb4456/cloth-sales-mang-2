@@ -1,13 +1,11 @@
-# app/analytics_engine.py
+# app/analytics_engine.py - UPDATED WITH FACEBOOK PROPHET
 
 from datetime import datetime, timedelta, date
 from typing import List, Dict, Tuple, Optional
 from decimal import Decimal
 from collections import defaultdict
 import numpy as np
-import logging
-
-logger = logging.getLogger(__name__)
+import pandas as pd
 
 # Try to import sklearn - use advanced ML if available
 try:
@@ -17,8 +15,19 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    logger.info("Warning: scikit-learn not installed. Using basic linear regression.")
-    logger.info("Install with: pip install scikit-learn")
+    print("⚠️ Warning: scikit-learn not installed. Using basic linear regression.")
+
+# 🆕 NEW: Try to import Prophet for time series forecasting
+try:
+    from prophet import Prophet
+    import warnings
+    warnings.filterwarnings('ignore', category=FutureWarning)
+    PROPHET_AVAILABLE = True
+    print("✅ Prophet available for advanced time series forecasting")
+except ImportError:
+    PROPHET_AVAILABLE = False
+    print("⚠️ Warning: Prophet not installed. Using fallback regression.")
+    print("   Install with: pip install prophet")
 
 
 class AnalyticsEngine:
@@ -41,10 +50,7 @@ class AnalyticsEngine:
     
     @staticmethod
     def exponential_moving_average(data: List[float], alpha: float = 0.3) -> List[float]:
-        """
-        Calculate exponential moving average (gives more weight to recent data)
-        alpha: smoothing factor (0-1), higher = more weight to recent values
-        """
+        """Calculate exponential moving average"""
         if not data:
             return []
         
@@ -53,89 +59,338 @@ class AnalyticsEngine:
             ema.append(alpha * value + (1 - alpha) * ema[-1])
         return ema
     
+    # 🆕 NEW: Facebook Prophet Time Series Forecasting (Generic)
     @staticmethod
-    def linear_regression_forecast_sklearn(x: np.ndarray, y: np.ndarray, 
-                                          future_periods: int,
-                                          use_polynomial: bool = False,
-                                          degree: int = 2) -> Dict:
+    def forecast_timeseries_prophet(historical_data: List[Dict], days_ahead: int = 30, 
+                                    value_column: str = "revenue") -> Dict:
         """
-        Advanced linear regression using scikit-learn
-        Returns: dict with predictions, r_squared, mae, rmse, and model info
+        Advanced time series forecasting using Facebook Prophet
+        Works for BOTH revenue and quantity predictions
+        
+        historical_data: [{"date": "2024-01-01", "revenue": 1000}, ...] 
+                        OR [{"date": "2024-01-01", "quantity": 50}, ...]
+        value_column: "revenue" or "quantity" - what to predict
         """
-        if len(x) < 2:
+        if not PROPHET_AVAILABLE:
+            print("⚠️ Prophet not available, falling back to sklearn")
+            return AnalyticsEngine.forecast_sklearn_fallback(historical_data, days_ahead, value_column)
+        
+        if len(historical_data) < 7:
             return {
-                "predictions": [y[-1]] * future_periods if len(y) > 0 else [0] * future_periods,
-                "r_squared": 0.0,
-                "mae": 0.0,
-                "rmse": 0.0,
-                "model_type": "insufficient_data"
+                "forecast": [],
+                "confidence": "low",
+                "r_squared": 0,
+                "mae": 0,
+                "rmse": 0,
+                "total_predicted": 0,
+                "avg_daily_predicted": 0,
+                "model_info": {"type": "insufficient_data"},
+                "message": "Need at least 7 days of data for Prophet forecasting"
             }
         
-        # Reshape for sklearn
-        X = x.reshape(-1, 1)
-        y_values = y.reshape(-1, 1)
+        try:
+            # Prepare data for Prophet (needs 'ds' and 'y' columns)
+            df = pd.DataFrame(historical_data)
+            df['ds'] = pd.to_datetime(df['date'])
+            
+            # 🆕 FLEXIBLE: Use either "revenue" or "quantity" column
+            if value_column in df.columns:
+                df['y'] = df[value_column]
+            else:
+                # Try alternative column names
+                if 'quantity_sold' in df.columns:
+                    df['y'] = df['quantity_sold']
+                elif 'value' in df.columns:
+                    df['y'] = df['value']
+                else:
+                    raise ValueError(f"Column '{value_column}' not found in data")
+            
+            df = df[['ds', 'y']]
+            
+            # Remove any NaN values
+            df = df.dropna()
+            
+            if len(df) < 7:
+                raise ValueError("Insufficient valid data points")
+            
+            # 🎯 OPTIMIZED: Different settings for revenue vs quantity
+            if value_column == "quantity" or "quantity" in value_column:
+                # Quantity predictions: More stable, less sensitive to spikes
+                model = Prophet(
+                    daily_seasonality=False,
+                    weekly_seasonality=True,
+                    yearly_seasonality=False,
+                    changepoint_prior_scale=0.03,  # More stable for quantities
+                    seasonality_mode='additive'     # Additive for quantities
+                )
+            else:
+                # Revenue predictions: Can handle larger variations
+                model = Prophet(
+                    daily_seasonality=False,
+                    weekly_seasonality=True,
+                    yearly_seasonality=False,
+                    changepoint_prior_scale=0.05,
+                    seasonality_mode='multiplicative'
+                )
+            
+            # Fit the model
+            model.fit(df)
+            
+            # Create future dataframe for predictions
+            future = model.make_future_dataframe(periods=days_ahead, freq='D')
+            
+            # Generate forecast
+            forecast = model.predict(future)
+            
+            # Extract predictions for future dates only
+            future_forecast = forecast.tail(days_ahead)
+            
+            # Calculate model accuracy on historical data
+            historical_forecast = forecast.head(len(df))
+            y_true = df['y'].values
+            y_pred = historical_forecast['yhat'].values
+            
+            # Ensure non-negative predictions
+            future_forecast['yhat'] = future_forecast['yhat'].clip(lower=0)
+            future_forecast['yhat_lower'] = future_forecast['yhat_lower'].clip(lower=0)
+            future_forecast['yhat_upper'] = future_forecast['yhat_upper'].clip(lower=0)
+            
+            # Calculate metrics
+            mae = mean_absolute_error(y_true, y_pred)
+            rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+            
+            # R² calculation
+            ss_res = np.sum((y_true - y_pred) ** 2)
+            ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+            
+            # Determine confidence based on R²
+            if r_squared > 0.7:
+                confidence = "high"
+            elif r_squared > 0.4:
+                confidence = "medium"
+            else:
+                confidence = "low"
+            
+            # 🆕 Format forecast data (works for both revenue and quantity)
+            forecast_data = []
+            for _, row in future_forecast.iterrows():
+                item = {
+                    "date": row['ds'].strftime("%Y-%m-%d"),
+                    "lower_bound": round(float(row['yhat_lower']), 2),
+                    "upper_bound": round(float(row['yhat_upper']), 2),
+                    "confidence_level": confidence
+                }
+                
+                # Add appropriate key based on what we're predicting
+                if value_column == "quantity" or "quantity" in value_column:
+                    item["predicted_quantity"] = int(round(float(row['yhat'])))
+                else:
+                    item["predicted_revenue"] = round(float(row['yhat']), 2)
+                
+                forecast_data.append(item)
+            
+            # Calculate totals
+            if value_column == "quantity" or "quantity" in value_column:
+                total_predicted = sum(item['predicted_quantity'] for item in forecast_data)
+            else:
+                total_predicted = sum(item.get('predicted_revenue', 0) for item in forecast_data)
+            
+            avg_daily = total_predicted / len(forecast_data) if forecast_data else 0
+            
+            return {
+                "forecast": forecast_data,
+                "confidence": confidence,
+                "r_squared": round(r_squared, 3),
+                "mae": round(mae, 2),
+                "rmse": round(rmse, 2),
+                "total_predicted": round(total_predicted, 2),
+                "total_predicted_revenue": round(total_predicted, 2),
+                "avg_daily_predicted": round(avg_daily, 2),
+                "model_info": {
+                    "type": "prophet",
+                    "predicting": value_column,
+                    "components": "trend + weekly_seasonality",
+                    "using_prophet": True
+                },
+                "message": f"Prophet model trained on {len(df)} days of data"
+            }
+            
+        except Exception as e:
+            print(f"❌ Prophet forecasting failed: {str(e)}")
+            print("   Falling back to sklearn regression")
+            return AnalyticsEngine.forecast_sklearn_fallback(historical_data, days_ahead, value_column)
+    
+    # 🆕 WRAPPER: Revenue forecasting (for PredictionsDashboard)
+    @staticmethod
+    def forecast_revenue_prophet(historical_data: List[Dict], days_ahead: int = 30) -> Dict:
+        """Predict future REVENUE using Prophet"""
+        return AnalyticsEngine.forecast_timeseries_prophet(
+            historical_data, days_ahead, value_column="revenue"
+        )
+    
+    # 🆕 NEW: Product demand forecasting (for ProductDemandPredictor)
+    @staticmethod
+    def forecast_product_demand_prophet(historical_data: List[Dict], days_ahead: int = 30) -> Dict:
+        """Predict future QUANTITY/DEMAND using Prophet"""
+        return AnalyticsEngine.forecast_timeseries_prophet(
+            historical_data, days_ahead, value_column="quantity"
+        )
+    
+    # 🔧 UPDATED: Main forecast method now uses Prophet by default
+    @staticmethod
+    def forecast_revenue(historical_data: List[Dict], days_ahead: int = 30,
+                        use_advanced: bool = True) -> Dict:
+        """
+        Smart revenue forecasting that picks the best available method
         
-        # Use polynomial features if requested (for non-linear trends)
-        if use_polynomial and degree > 1:
-            logger.info("using polynomial for non linear trends")
-            poly = PolynomialFeatures(degree=degree)
-            X_poly = poly.fit_transform(X)
-            model = LinearRegression()
-            model.fit(X_poly, y_values)
-            
-            # Make predictions
-            y_pred = model.predict(X_poly).flatten()
-            
-            # Future predictions
-            future_x = np.arange(len(x), len(x) + future_periods).reshape(-1, 1)
-            future_X_poly = poly.transform(future_x)
-            predictions = model.predict(future_X_poly).flatten()
-            
-            model_type = f"polynomial_degree_{degree}"
+        Priority:
+        1. Facebook Prophet (best for retail time series)
+        2. Scikit-learn regression (fallback)
+        3. Basic linear regression (last resort)
+        """
+        if len(historical_data) < 7:
+            return {
+                "forecast": [],
+                "confidence": "low",
+                "r_squared": 0,
+                "total_predicted": 0,
+                "total_predicted_revenue": 0,
+                "avg_daily_predicted": 0,
+                "model_info": {"type": "insufficient_data"},
+                "message": "Need at least 7 days of historical data for accurate forecasting"
+            }
+        
+        # 🆕 TRY PROPHET FIRST (best for time series)
+        if PROPHET_AVAILABLE and use_advanced:
+            return AnalyticsEngine.forecast_revenue_prophet(historical_data, days_ahead)
+        
+        # FALLBACK TO SKLEARN
+        return AnalyticsEngine.forecast_sklearn_fallback(historical_data, days_ahead, "revenue")
+    
+    @staticmethod
+    def forecast_sklearn_fallback(historical_data: List[Dict], days_ahead: int = 30,
+                                  value_column: str = "revenue") -> Dict:
+        """
+        Fallback: Scikit-learn based forecasting when Prophet is unavailable
+        Works for both revenue and quantity predictions
+        """
+        if len(historical_data) < 7:
+            return {
+                "forecast": [],
+                "confidence": "low",
+                "r_squared": 0,
+                "total_predicted": 0,
+                "model_info": {"type": "insufficient_data"}
+            }
+        
+        # Prepare data - flexible column selection
+        x = list(range(len(historical_data)))
+        
+        if value_column in historical_data[0]:
+            y = [item[value_column] for item in historical_data]
+        elif 'quantity_sold' in historical_data[0]:
+            y = [item['quantity_sold'] for item in historical_data]
+        elif 'value' in historical_data[0]:
+            y = [item['value'] for item in historical_data]
         else:
-            # Standard linear regression
+            return {
+                "forecast": [],
+                "confidence": "low",
+                "message": f"Could not find {value_column} in data"
+            }
+        
+        # Apply smoothing
+        if len(y) >= 7:
+            y_smoothed = AnalyticsEngine.calculate_moving_average(y, window=7)
+        else:
+            y_smoothed = y
+        
+        # Use polynomial if sklearn available
+        if SKLEARN_AVAILABLE:
+            X = np.array(x).reshape(-1, 1)
+            y_array = np.array(y_smoothed)
+            
+            poly = PolynomialFeatures(degree=2)
+            X_poly = poly.fit_transform(X)
+            
             model = LinearRegression()
-            model.fit(X, y_values)
+            model.fit(X_poly, y_array)
             
-            # Make predictions
-            y_pred = model.predict(X).flatten()
+            y_pred = model.predict(X_poly)
             
-            # Future predictions
-            future_x = np.arange(len(x), len(x) + future_periods).reshape(-1, 1)
-            predictions = model.predict(future_x).flatten()
+            future_x = np.arange(len(x), len(x) + days_ahead).reshape(-1, 1)
+            future_X_poly = poly.transform(future_x)
+            predictions = model.predict(future_X_poly)
+            predictions = np.maximum(predictions, 0)
             
-            model_type = "linear"
+            r_squared = r2_score(y_array, y_pred)
+            mae = mean_absolute_error(y_array, y_pred)
+            rmse = np.sqrt(mean_squared_error(y_array, y_pred))
+            
+            predictions_list = predictions.tolist()
+        else:
+            predictions_list, r_squared = AnalyticsEngine.linear_regression_forecast_basic(
+                x, y_smoothed, days_ahead
+            )
+            mae = 0
+            rmse = 0
         
-        # Ensure no negative predictions
-        predictions = np.maximum(predictions, 0)
+        if r_squared > 0.7:
+            confidence = "high"
+        elif r_squared > 0.4:
+            confidence = "medium"
+        else:
+            confidence = "low"
         
-        # Calculate metrics
-        r_squared = r2_score(y, y_pred)
-        mae = mean_absolute_error(y, y_pred)
-        rmse = np.sqrt(mean_squared_error(y, y_pred))
+        last_date_str = historical_data[-1]["date"]
+        if isinstance(last_date_str, str):
+            last_date = datetime.strptime(last_date_str, "%Y-%m-%d").date()
+        else:
+            last_date = last_date_str
+        
+        forecast_data = []
+        for i, pred in enumerate(predictions_list, 1):
+            forecast_date = last_date + timedelta(days=i)
+            item = {
+                "date": forecast_date.strftime("%Y-%m-%d"),
+                "confidence_level": confidence
+            }
+            
+            # Add appropriate prediction key
+            if value_column == "quantity" or "quantity" in value_column:
+                item["predicted_quantity"] = int(round(pred))
+            else:
+                item["predicted_revenue"] = round(pred, 2)
+            
+            forecast_data.append(item)
+        
+        total_predicted = round(sum(predictions_list), 2)
+        avg_daily = round(sum(predictions_list) / len(predictions_list), 2) if predictions_list else 0
         
         return {
-            "predictions": predictions.tolist(),
-            "r_squared": float(r_squared),
-            "mae": float(mae),
-            "rmse": float(rmse),
-            "model_type": model_type,
-            "coefficients": model.coef_.flatten().tolist(),
-            "intercept": float(model.intercept_[0]) if hasattr(model.intercept_, '__iter__') else float(model.intercept_)
+            "forecast": forecast_data,
+            "confidence": confidence,
+            "r_squared": round(r_squared, 3),
+            "mae": round(mae, 2),
+            "rmse": round(rmse, 2),
+            "total_predicted": total_predicted,
+            "total_predicted_revenue": total_predicted,
+            "avg_daily_predicted": avg_daily,
+            "model_info": {
+                "type": "sklearn_polynomial" if SKLEARN_AVAILABLE else "basic_linear",
+                "using_prophet": False
+            }
         }
     
     @staticmethod
     def linear_regression_forecast_basic(x: List[float], y: List[float], 
                                         future_periods: int) -> Tuple[List[float], float]:
-        """
-        Fallback: Basic linear regression (when sklearn not available)
-        Returns: (predictions, r_squared)
-        """
+        """Basic linear regression (last resort fallback)"""
         n = len(x)
         if n < 2:
             return [y[-1]] * future_periods if y else [0] * future_periods, 0.0
         
-        # Calculate slope and intercept
         x_mean = sum(x) / n
         y_mean = sum(y) / n
         
@@ -148,13 +403,13 @@ class AnalyticsEngine:
         slope = numerator / denominator
         intercept = y_mean - slope * x_mean
         
-        # Calculate R-squared
+        # R-squared
         y_pred = [slope * x[i] + intercept for i in range(n)]
         ss_res = sum((y[i] - y_pred[i]) ** 2 for i in range(n))
         ss_tot = sum((y[i] - y_mean) ** 2 for i in range(n))
         r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
         
-        # Generate predictions
+        # Predictions
         predictions = []
         for i in range(future_periods):
             future_x = n + i
@@ -163,48 +418,7 @@ class AnalyticsEngine:
         
         return predictions, r_squared
     
-    @staticmethod
-    def linear_regression_forecast(x: List[float], y: List[float], 
-                                   future_periods: int,
-                                   use_polynomial: bool = False) -> Dict:
-        """
-        Smart wrapper: Uses sklearn if available, falls back to basic implementation
-        """
-        if SKLEARN_AVAILABLE:
-            x_array = np.array(x)
-            y_array = np.array(y)
-            
-            # Try polynomial regression for better fit if requested
-            if use_polynomial:
-                result = AnalyticsEngine.linear_regression_forecast_sklearn(
-                    x_array, y_array, future_periods, use_polynomial=True, degree=2
-                )
-            else:
-                result = AnalyticsEngine.linear_regression_forecast_sklearn(
-                    x_array, y_array, future_periods
-                )
-            
-            return {
-                "predictions": result["predictions"],
-                "r_squared": result["r_squared"],
-                "mae": result.get("mae", 0),
-                "rmse": result.get("rmse", 0),
-                "model_type": result.get("model_type", "linear"),
-                "using_sklearn": True
-            }
-        else:
-            # Fallback to basic implementation
-            predictions, r_squared = AnalyticsEngine.linear_regression_forecast_basic(
-                x, y, future_periods
-            )
-            return {
-                "predictions": predictions,
-                "r_squared": r_squared,
-                "mae": 0,
-                "rmse": 0,
-                "model_type": "basic_linear",
-                "using_sklearn": False
-            }
+    # ... [REST OF YOUR EXISTING METHODS - keep all the other methods unchanged] ...
     
     @staticmethod
     def calculate_growth_rate(current: float, previous: float) -> float:
@@ -222,7 +436,6 @@ class AnalyticsEngine:
         x = list(range(len(data)))
         
         if SKLEARN_AVAILABLE:
-            # Use sklearn for better trend detection
             X = np.array(x).reshape(-1, 1)
             y = np.array(data)
             
@@ -233,7 +446,6 @@ class AnalyticsEngine:
             r_squared = r2_score(y, model.predict(X))
             y_mean = np.mean(y)
         else:
-            # Fallback to basic calculation
             x_mean = sum(x) / len(x)
             y_mean = sum(data) / len(data)
             
@@ -245,14 +457,12 @@ class AnalyticsEngine:
             
             slope = numerator / denominator
             
-            # Calculate R-squared
             y_pred = [slope * x[i] + (y_mean - slope * x_mean) for i in range(len(data))]
             ss_res = sum((data[i] - y_pred[i]) ** 2 for i in range(len(data)))
             ss_tot = sum((data[i] - y_mean) ** 2 for i in range(len(data)))
             r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
         
-        # Determine trend
-        threshold = y_mean * 0.01  # 1% of mean as threshold
+        threshold = y_mean * 0.01
         
         if slope > threshold:
             trend = "upward"
@@ -261,26 +471,21 @@ class AnalyticsEngine:
         else:
             trend = "stable"
         
-        # Calculate strength (normalized)
         strength = min(abs(slope / y_mean) * 100, 100) if y_mean != 0 else 0
         
         return {
             "trend": trend,
             "strength": round(strength, 2),
             "slope": round(slope, 2),
-            "confidence": round(r_squared * 100, 2)  # R² as confidence %
+            "confidence": round(r_squared * 100, 2)
         }
     
     @staticmethod
     def calculate_seasonality(data: List[Dict], period: int = 7) -> Dict:
-        """
-        Detect seasonal patterns (e.g., day of week patterns)
-        data: List of {"date": date_obj, "value": float} OR {"date": date_obj, "revenue": float}
-        """
+        """Detect seasonal patterns"""
         if len(data) < period * 2:
             return {"has_seasonality": False, "pattern": {}}
         
-        # Group by day of week
         period_data = defaultdict(list)
         for item in data:
             if isinstance(item["date"], str):
@@ -289,18 +494,15 @@ class AnalyticsEngine:
                 date_obj = item["date"]
             
             day_of_week = date_obj.weekday()
-            
-            # 🔧 FIX: Handle both "value" and "revenue" keys
             value = item.get("value") or item.get("revenue", 0)
             period_data[day_of_week].append(float(value))
         
-        # Calculate average and std for each day
         pattern = {}
         std_pattern = {}
         for day, values in period_data.items():
             if len(values) == 0:
                 continue
-                
+            
             pattern[day] = sum(values) / len(values)
             if SKLEARN_AVAILABLE:
                 std_pattern[day] = float(np.std(values))
@@ -309,7 +511,6 @@ class AnalyticsEngine:
                 variance = sum((v - mean) ** 2 for v in values) / len(values)
                 std_pattern[day] = variance ** 0.5
         
-        # Check if variation is significant
         if len(pattern) > 0:
             avg = sum(pattern.values()) / len(pattern)
             variation = sum(abs(v - avg) for v in pattern.values()) / len(pattern)
@@ -318,7 +519,7 @@ class AnalyticsEngine:
             has_seasonality = False
         
         days_map = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday",
-                4: "Friday", 5: "Saturday", 6: "Sunday"}
+                    4: "Friday", 5: "Saturday", 6: "Sunday"}
         
         return {
             "has_seasonality": has_seasonality,
@@ -331,12 +532,7 @@ class AnalyticsEngine:
     @staticmethod
     def calculate_reorder_point(avg_daily_sales: float, lead_time_days: int = 7,
                                safety_stock_factor: float = 1.5) -> int:
-        """
-        Calculate when to reorder inventory
-        avg_daily_sales: Average units sold per day
-        lead_time_days: Days it takes to receive new stock
-        safety_stock_factor: Multiplier for safety stock
-        """
+        """Calculate when to reorder inventory"""
         avg_daily_sales = float(avg_daily_sales)
         
         if avg_daily_sales <= 0:
@@ -351,102 +547,11 @@ class AnalyticsEngine:
             return int(math.ceil(reorder_point))
     
     @staticmethod
-    def forecast_revenue(historical_data: List[Dict], days_ahead: int = 30,
-                        use_advanced: bool = True) -> Dict:
-        """
-        Forecast revenue for future days
-        historical_data: [{"date": "2024-01-01", "revenue": 1000}, ...]
-        use_advanced: Use polynomial regression if available
-        """
-        if len(historical_data) < 7:
-            return {
-                "forecast": [],
-                "confidence": "low",
-                "r_squared": 0,
-                "total_predicted": 0,
-                "total_predicted_revenue": 0,
-                "avg_daily_predicted": 0,
-                "model_info": {"type": "insufficient_data"},
-                "message": "Insufficient historical data for accurate forecasting (need at least 7 days)"
-            }
-        
-        # Prepare data
-        x = list(range(len(historical_data)))
-        y = [item["revenue"] for item in historical_data]
-        
-        # Apply smoothing for better trend detection
-        if len(y) >= 7:
-            if SKLEARN_AVAILABLE:
-                y_smoothed = AnalyticsEngine.exponential_moving_average(y, alpha=0.3)
-            else:
-                y_smoothed = AnalyticsEngine.calculate_moving_average(y, window=7)
-        else:
-            y_smoothed = y
-        
-        # Decide whether to use polynomial regression
-        use_polynomial = use_advanced and SKLEARN_AVAILABLE and len(historical_data) >= 14
-        
-        # Generate forecast
-        forecast_result = AnalyticsEngine.linear_regression_forecast(
-            x, y_smoothed, days_ahead, use_polynomial=use_polynomial
-        )
-        
-        predictions = forecast_result["predictions"]
-        r_squared = forecast_result["r_squared"]
-        
-        # Determine confidence level
-        if r_squared > 0.7:
-            confidence = "high"
-        elif r_squared > 0.4:
-            confidence = "medium"
-        else:
-            confidence = "low"
-        
-        # Generate forecast dates
-        if historical_data:
-            last_date_str = historical_data[-1]["date"]
-            if isinstance(last_date_str, str):
-                last_date = datetime.strptime(last_date_str, "%Y-%m-%d").date()
-            else:
-                last_date = last_date_str
-        else:
-            last_date = date.today()
-        
-        forecast_data = []
-        for i, pred in enumerate(predictions, 1):
-            forecast_date = last_date + timedelta(days=i)
-            forecast_data.append({
-                "date": forecast_date.strftime("%Y-%m-%d"),
-                "predicted_revenue": round(pred, 2),
-                "confidence_level": confidence
-            })
-        
-        total_predicted = round(sum(predictions), 2) if predictions else 0
-        avg_daily = round(sum(predictions) / len(predictions), 2) if predictions else 0
-        
-        return {
-            "forecast": forecast_data,
-            "confidence": confidence,
-            "r_squared": round(r_squared, 3),
-            "mae": round(forecast_result.get("mae", 0), 2),
-            "rmse": round(forecast_result.get("rmse", 0), 2),
-            "total_predicted": total_predicted,
-            "total_predicted_revenue": total_predicted,
-            "avg_daily_predicted": avg_daily,
-            "model_info": {
-                "type": forecast_result.get("model_type", "unknown"),
-                "using_sklearn": forecast_result.get("using_sklearn", False),
-                "sklearn_available": SKLEARN_AVAILABLE
-            }
-        }
-    
-    @staticmethod
     def generate_insights(sales_data: List[Dict], inventory_data: List[Dict],
                          product_data: List[Dict]) -> List[Dict]:
-        """Generate actionable business insights using AI/ML analysis"""
+        """Generate actionable business insights"""
         insights = []
         
-        # Insight 1: Revenue Trend
         if len(sales_data) >= 7:
             revenues = [s["revenue"] for s in sales_data]
             trend_info = AnalyticsEngine.detect_trend(revenues)
@@ -456,7 +561,7 @@ class AnalyticsEngine:
                     "type": "positive",
                     "category": "revenue",
                     "title": "Strong Revenue Growth",
-                    "message": f"Revenue is trending upward with {trend_info['strength']:.1f}% strength ({trend_info['confidence']:.0f}% confidence). Great momentum!",
+                    "message": f"Revenue is trending upward with {trend_info['strength']:.1f}% strength ({trend_info['confidence']:.0f}% confidence).",
                     "priority": "high",
                     "confidence": trend_info["confidence"]
                 })
@@ -465,12 +570,11 @@ class AnalyticsEngine:
                     "type": "warning",
                     "category": "revenue",
                     "title": "Revenue Declining",
-                    "message": f"Revenue shows a downward trend ({trend_info['confidence']:.0f}% confidence). Consider promotions or review pricing strategy.",
+                    "message": f"Revenue shows a downward trend ({trend_info['confidence']:.0f}% confidence). Consider promotions.",
                     "priority": "high",
                     "confidence": trend_info["confidence"]
                 })
         
-        # Insight 2: Best Selling Products
         if len(product_data) > 0:
             sorted_products = sorted(product_data, key=lambda x: x.get("revenue", 0), reverse=True)
             if sorted_products:
@@ -479,37 +583,10 @@ class AnalyticsEngine:
                     "type": "info",
                     "category": "product",
                     "title": f"Top Performer: {top_product['name']}",
-                    "message": f"Generated ₹{top_product['revenue']:,.0f} in revenue. Ensure adequate stock levels.",
+                    "message": f"Generated ₹{top_product['revenue']:,.0f} in revenue.",
                     "priority": "medium"
                 })
         
-        # Insight 3: Slow Moving Products
-        if len(product_data) > 0:
-            avg_revenue = sum(p.get("revenue", 0) for p in product_data) / len(product_data)
-            slow_movers = [p for p in product_data if p.get("revenue", 0) < avg_revenue * 0.3]
-            
-            if slow_movers:
-                insights.append({
-                    "type": "warning",
-                    "category": "inventory",
-                    "title": "Slow Moving Products Detected",
-                    "message": f"{len(slow_movers)} product(s) selling below 30% of average. Consider discounts or bundling.",
-                    "priority": "medium"
-                })
-        
-        # Insight 4: High Margin Products
-        if len(product_data) > 0:
-            high_margin = [p for p in product_data if p.get("margin", 0) > 35]
-            if high_margin:
-                insights.append({
-                    "type": "positive",
-                    "category": "profit",
-                    "title": "High Margin Opportunities",
-                    "message": f"{len(high_margin)} product(s) with >35% margin. Focus on promoting these items.",
-                    "priority": "high"
-                })
-        
-        # Insight 5: Seasonality Detection
         if len(sales_data) >= 14:
             seasonality = AnalyticsEngine.calculate_seasonality(sales_data)
             if seasonality["has_seasonality"] and seasonality["best_day"]:
@@ -517,7 +594,7 @@ class AnalyticsEngine:
                     "type": "info",
                     "category": "sales",
                     "title": f"Peak Sales Day: {seasonality['best_day']}",
-                    "message": f"Sales are consistently higher on {seasonality['best_day']}. Plan inventory and staffing accordingly.",
+                    "message": f"Sales are consistently higher on {seasonality['best_day']}.",
                     "priority": "medium"
                 })
         
