@@ -1,10 +1,9 @@
-// frontend/src/pages/Dashboard.jsx
+// frontend/src/pages/Dashboard.jsx - FIXED
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { TrendingUp, Package, ShoppingCart, DollarSign } from 'lucide-react';
 import { Card, CardBody, CardHeader, Input, Spinner } from '@heroui/react';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import api from '../api/api'; // ✅ USE THE CONFIGURED API
 
 // Helper function to get item count
 const getItemCount = (quantity, unit) => {
@@ -45,34 +44,16 @@ export default function Dashboard() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        setError('Not authenticated');
-        return;
-      }
-
-      // Fetch daily report, sales, and varieties
+      // ✅ FIXED: Use configured API instead of hardcoded localhost
       const [reportRes, salesRes, varietiesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/reports/daily/${date}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch(`${API_BASE_URL}/sales/date/${date}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch(`${API_BASE_URL}/varieties/`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+        api.get(`/reports/daily/${date}`),
+        api.get(`/sales/date/${date}`),
+        api.get('/varieties/')
       ]);
 
-      // Check if any request failed
-      if (!reportRes.ok || !salesRes.ok || !varietiesRes.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const reportData = await reportRes.json();
-      const salesData = await salesRes.json();
-      const varietiesData = await varietiesRes.json();
+      const reportData = reportRes.data;
+      const salesData = salesRes.data;
+      const varietiesData = varietiesRes.data;
 
       // Create variety map
       const varietyMap = {};
@@ -98,7 +79,7 @@ export default function Dashboard() {
       setReport(reportData);
     } catch (error) {
       console.error('Error loading report:', error);
-      setError(error.message);
+      setError(error.response?.data?.detail || error.message || 'Failed to load data');
       setReport(null);
     } finally {
       setLoading(false);
