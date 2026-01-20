@@ -1,29 +1,17 @@
-// frontend/src/api/api.js - FIXED API CONFIGURATION
+// frontend/src/api/api.js
 import axios from 'axios';
 
-// 🔧 DYNAMIC API BASE URL DETECTION
-const getApiBaseUrl = () => {
-  // Check if we're in production (Vercel)
-  if (window.location.hostname.includes('vercel.app')) {
-    // REPLACE THIS WITH YOUR NGROK URL
-    return 'https://stromal-infusive-detra.ngrok-free.dev';
-    // Example: return 'https://abc123.ngrok-free.app';
-  }
-  
-  // Development (localhost)
-  return 'http://127.0.0.1:8000';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': 'true', // 🔧 Skip ngrok browser warning
+    'User-Agent': 'ClothShopApp/1.0', // 🔧 Custom user agent
   },
+  withCredentials: false, // 🔧 Disable credentials for ngrok
 });
-
 // REQUEST INTERCEPTOR - Add token to all requests
 api.interceptors.request.use(
   (config) => {
@@ -96,5 +84,18 @@ export const createExpense = (data) => api.post('/expenses/', data);
 export const deleteExpense = (id) => api.delete(`/expenses/${id}`);
 export const getExpenseSummary = (date) => api.get(`/expenses/summary/${date}`);
 export const getFinancialReport = (year, month) => api.get(`/expenses/financial-report/${year}/${month}`);
+
+// // WhatsApp endpoints
+// export const sendInvoiceWhatsApp = (saleId, customerPhone) => 
+//   api.post(`/whatsapp/send-invoice/${saleId}?customer_phone=${customerPhone}`);
+
+// export const sendPaymentReminder = (loanId) => 
+//   api.post(`/whatsapp/payment-reminder/${loanId}`);
+
+// export const sendDailySummary = () => 
+//   api.post('/whatsapp/daily-summary');
+
+// export const testWhatsApp = (phone) => 
+//   api.get(`/whatsapp/test?phone=${phone}`);
 
 export default api;

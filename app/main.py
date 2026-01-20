@@ -42,20 +42,14 @@ app = FastAPI(
 # 🔧 UPDATED CORS MIDDLEWARE - FIX FOR NGROK + MOBILE
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://cloth-sales-mang-2.vercel.app",
-        "https://*.vercel.app",
-        "https://*.ngrok-free.dev",  # ngrok domains
-        "https://*.ngrok.io",         # old ngrok domains
-        "*"  # Allow all origins (for development with ngrok)
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins for ngrok
+    allow_credentials=False,  # Disable credentials for broader compatibility
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=3600,  # Cache preflight for 1 hour
 )
+
 # Include routers
 app.include_router(varieties.router)
 app.include_router(supplier.router)
