@@ -1,7 +1,8 @@
-// frontend/src/components/LandingAuthPage.jsx
+// frontend/src/components/LandingAuthPage.jsx - FIXED VERSION
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../App';
+import api from '../api/api'; // ✅ USE AUTHENTICATED API
 import {
   Store, TrendingUp, Users, BarChart3,
   Lock, Mail, Building2, Phone, Check
@@ -14,6 +15,7 @@ export default function LandingAuthPage() {
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(''); // ✅ ADD ERROR STATE
 
   const [loginData, setLoginData] = useState({
     email: '',
@@ -34,30 +36,45 @@ export default function LandingAuthPage() {
 
   const handleLogin = async () => {
     setLoading(true);
+    setError(''); // ✅ CLEAR PREVIOUS ERRORS
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginData)
+      // ✅ FIXED: Use authenticated API instead of fetch
+      const response = await api.post('/auth/login', {
+        email: loginData.email,
+        password: loginData.password
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        login(data.access_token, data.refresh_token, data.user, data.tenant);
-        navigate('/varieties');
-      } else {
-        const error = await response.json();
-        alert(error.detail || 'Login failed');
-      }
-    } catch (error) {
-      alert('Login failed. Please try again.');
+      const data = response.data;
+      
+      console.log('✅ Login successful:', data);
+      
+      // Store tokens
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('tenant', JSON.stringify(data.tenant));
+      
+      // Login to context
+      login(data.access_token, data.refresh_token, data.user, data.tenant);
+      
+      // Redirect
+      navigate('/Dashboard');
+      
+    } catch (err) {
+      console.error('❌ Login error:', err);
+      
+      const errorMessage = err.response?.data?.detail || 'Login failed. Please try again.';
+      setError(errorMessage);
+      alert(errorMessage);
+      
     } finally {
       setLoading(false);
     }
   };
 
   const handleRegister = async () => {
+    // ✅ VALIDATION
     if (registerData.password !== registerData.confirm_password) {
       alert('Passwords do not match');
       return;
@@ -69,35 +86,48 @@ export default function LandingAuthPage() {
     }
 
     setLoading(true);
+    setError(''); // ✅ CLEAR PREVIOUS ERRORS
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_name: registerData.business_name,
-          owner_name: registerData.owner_name,
-          email: registerData.email,
-          phone: registerData.phone,
-          password: registerData.password,
-          city: registerData.city,
-          state: registerData.state,
-          address: registerData.address,
-          country: 'Pakistan'
-        })
+      // ✅ FIXED: Use authenticated API instead of fetch
+      const response = await api.post('/auth/register', {
+        business_name: registerData.business_name,
+        owner_name: registerData.owner_name,
+        email: registerData.email,
+        phone: registerData.phone || null,
+        password: registerData.password,
+        city: registerData.city || null,
+        state: registerData.state || null,
+        address: registerData.address || null,
+        country: 'Pakistan',
+        business_type: 'cloth_shop'
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        login(data.access_token, data.refresh_token, data.user, data.tenant);
-        alert('Welcome! You have a 7-day free trial.');
-        navigate('/varieties');
-      } else {
-        const error = await response.json();
-        alert(error.detail || 'Registration failed');
-      }
-    } catch (error) {
-      alert('Registration failed. Please try again.');
+      const data = response.data;
+      
+      console.log('✅ Registration successful:', data);
+      
+      // Store tokens
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('tenant', JSON.stringify(data.tenant));
+      
+      // Login to context
+      login(data.access_token, data.refresh_token, data.user, data.tenant);
+      
+      alert('Welcome! You have a 7-day free trial.');
+      
+      // Redirect
+      navigate('/Dashboard');
+      
+    } catch (err) {
+      console.error('❌ Registration error:', err);
+      
+      const errorMessage = err.response?.data?.detail || 'Registration failed. Please try again.';
+      setError(errorMessage);
+      alert(errorMessage);
+      
     } finally {
       setLoading(false);
     }
@@ -187,7 +217,6 @@ export default function LandingAuthPage() {
           </div>
         </div>
 
-        {/* 🆕 NEW: Footer with Privacy & Terms Links */}
         <footer className="border-t border-gray-200 bg-white py-6">
           <div className="max-w-6xl mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -233,7 +262,10 @@ export default function LandingAuthPage() {
 
         <div className="flex gap-1 mb-8 bg-gray-100 p-1 rounded-lg">
           <button
-            onClick={() => setAuthMode('login')}
+            onClick={() => {
+              setAuthMode('login');
+              setError('');
+            }}
             className={`flex-1 py-2 rounded-md text-sm font-medium transition ${authMode === 'login'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -242,7 +274,10 @@ export default function LandingAuthPage() {
             Sign In
           </button>
           <button
-            onClick={() => setAuthMode('register')}
+            onClick={() => {
+              setAuthMode('register');
+              setError('');
+            }}
             className={`flex-1 py-2 rounded-md text-sm font-medium transition ${authMode === 'register'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -251,6 +286,13 @@ export default function LandingAuthPage() {
             Sign Up
           </button>
         </div>
+
+        {/* ✅ ERROR MESSAGE */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            {error}
+          </div>
+        )}
 
         {authMode === 'login' ? (
           <div className="space-y-5">
@@ -416,7 +458,6 @@ export default function LandingAuthPage() {
               />
             </div>
 
-            {/* 🆕 NEW: Terms & Privacy Agreement */}
             <div className="text-xs text-gray-600 text-center">
               By signing up, you agree to our{' '}
               <Link to="/terms" className="text-blue-600 hover:underline">
