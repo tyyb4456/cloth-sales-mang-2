@@ -1,9 +1,11 @@
 // frontend/src/pages/Sales.jsx - FIXED WITH AUTHENTICATION
 
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, Trash2, Package, DollarSign, TrendingUp } from 'lucide-react';
+import { Plus, Calendar, Trash2, Package, DollarSign, TrendingUp , Send } from 'lucide-react';
 import SalesForm from '../components/SaleForm';
-import api from '../api/api'; // ✅ USING AUTHENTICATED API
+import api from '../api/api'; // USING AUTHENTICATED API
+// import { sendInvoiceWhatsApp } from '../api/api';
+
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -34,13 +36,26 @@ export default function EnhancedSalesWithPriceSelector() {
 
   const loadVarieties = async () => {
     try {
-      // ✅ FIXED: Using authenticated API
+      // Using authenticated API
       const response = await api.get('/varieties/');
       setVarieties(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading varieties:', error);
     }
   };
+
+  // const handleSendWhatsApp = async (sale) => {
+  //   const phone = prompt('Enter customer WhatsApp number (with country code, e.g., +923001234567):');
+    
+  //   if (!phone) return;
+    
+  //   try {
+  //     await sendInvoiceWhatsApp(sale.id, phone);
+  //     alert('Invoice sent via WhatsApp!');
+  //   } catch (error) {
+  //     alert('Failed to send: ' + (error.response?.data?.detail || 'Unknown error'));
+  //   }
+  // };
 
   const formatQuantityWithUnit = (quantity, unit) => {
     const qty = parseFloat(quantity);
@@ -299,6 +314,25 @@ export default function EnhancedSalesWithPriceSelector() {
                           <Trash2 size={18} />
                         </button>
                       </td>
+                      {/* <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleSendWhatsApp(item)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                            title="Send via WhatsApp"
+                          >
+                            <Send size={18} />
+                          </button>
+
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                            title="Delete sale"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td> */}
                     </tr>
                   ))}
                 </tbody>

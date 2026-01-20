@@ -4,7 +4,6 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { ToastProvider } from './components/Toast';
 import Sidebar from './components/Sidebar';
 
-// Import all your existing pages
 import Dashboard from './pages/Dashboard';
 import Varieties from './pages/Varieties';
 import SupplierInventory from './pages/SupplierInventory';

@@ -1,4 +1,4 @@
-# app/main.py
+# app/main.py - UPDATED WITH PROPER CORS FOR NGROK + MOBILE
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +19,6 @@ from routes import (
     auth_routes,
     user_management,
 )
- 
 
 
 @asynccontextmanager
@@ -40,15 +39,23 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
+# 🔧 UPDATED CORS MIDDLEWARE - FIX FOR NGROK + MOBILE
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://cloth-sales-mang-2.vercel.app",
+        "https://*.vercel.app",
+        "https://*.ngrok-free.dev",  # ngrok domains
+        "https://*.ngrok.io",         # old ngrok domains
+        "*"  # Allow all origins (for development with ngrok)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
-
 # Include routers
 app.include_router(varieties.router)
 app.include_router(supplier.router)
@@ -90,5 +97,5 @@ def health_check():
         "status": "healthy",
         "ai_enabled": True,
         "chatbot_enabled": True,
-        "voice_enabled": True  # NEW
+        "voice_enabled": True
     }

@@ -1,12 +1,26 @@
-// frontend/src/api/api.js
+// frontend/src/api/api.js - FIXED API CONFIGURATION
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+// 🔧 DYNAMIC API BASE URL DETECTION
+const getApiBaseUrl = () => {
+  // Check if we're in production (Vercel)
+  if (window.location.hostname.includes('vercel.app')) {
+    // REPLACE THIS WITH YOUR NGROK URL
+    return 'https://stromal-infusive-detra.ngrok-free.dev ';
+    // Example: return 'https://abc123.ngrok-free.app';
+  }
+  
+  // Development (localhost)
+  return 'http://127.0.0.1:8000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true', // 🔧 Skip ngrok browser warning
   },
 });
 

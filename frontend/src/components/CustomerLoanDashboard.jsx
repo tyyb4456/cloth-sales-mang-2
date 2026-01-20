@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import {
   Search, Calendar, DollarSign, Users,
   AlertCircle, CheckCircle, Clock,
-  TrendingUp, FileText, Phone, Plus
+  TrendingUp, FileText, Phone, Plus, Send 
 } from 'lucide-react';
-import api from '../api/api'; // ✅ USING AUTHENTICATED API
+import api from '../api/api'; // USING AUTHENTICATED API
+// import { sendPaymentReminder } from '../api/api';
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', {
@@ -57,6 +58,25 @@ export default function CustomerLoanDashboard() {
     }
   };
 
+  // const handleSendReminder = async (loan) => {
+  //   if (!loan.customer_phone) {
+  //     alert('❌ Customer phone number not available');
+  //     return;
+  //   }
+
+  //   if (!confirm(`Send payment reminder to ${loan.customer_name} via WhatsApp?`)) {
+  //     return;
+  //   }
+
+  //   try {
+  //     await api.post(`/whatsapp/payment-reminder/${loan.id}`);
+  //     alert('Payment reminder sent via WhatsApp!');
+  //   } catch (error) {
+  //     console.error('Error sending reminder:', error);
+  //     alert('Failed to send reminder: ' + (error.response?.data?.detail || 'Unknown error'));
+  //   }
+  // };
+
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
       loadData();
@@ -65,7 +85,7 @@ export default function CustomerLoanDashboard() {
 
     setLoading(true);
     try {
-      // ✅ FIXED: Using authenticated API
+      // Using authenticated API
       const response = await api.get(`/loans/search/${searchTerm}`);
       const data = response.data;
       setLoans(Array.isArray(data) ? data : []);
@@ -90,7 +110,7 @@ export default function CustomerLoanDashboard() {
     }
 
     try {
-      // ✅ FIXED: Using authenticated API
+      // FIXED: Using authenticated API
       const response = await api.post(`/loans/${selectedLoan.id}/payments`, {
         payment_amount: amount,
         payment_date: new Date().toISOString().split('T')[0],
@@ -113,7 +133,7 @@ export default function CustomerLoanDashboard() {
   };
 
   const handleDeleteLoan = async (loan) => {
-    const confirmMsg = `⚠️ WARNING: This will permanently delete:
+    const confirmMsg = `WARNING: This will permanently delete:
 
 - Loan for customer: ${loan.customer_name}
 - Loan amount: ₹${parseFloat(loan.total_loan_amount).toLocaleString()}
@@ -131,16 +151,16 @@ Are you sure you want to delete this loan?`;
     setLoading(true);
 
     try {
-      // ✅ FIXED: Using authenticated API
+      // FIXED: Using authenticated API
       const response = await api.delete(`/loans/${loan.id}`);
 
       if (response.status === 200 || response.status === 204) {
-        alert('✅ Loan deleted successfully!');
+        alert('Loan deleted successfully!');
         loadData();
       }
     } catch (error) {
       console.error('Error deleting loan:', error);
-      alert(error.response?.data?.detail || '❌ Failed to delete loan. Please try again.');
+      alert(error.response?.data?.detail || 'Failed to delete loan. Please try again.');
     } finally {
       setLoading(false);
     }
