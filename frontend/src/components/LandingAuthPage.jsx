@@ -59,7 +59,7 @@ export default function LandingAuthPage() {
       login(data.access_token, data.refresh_token, data.user, data.tenant);
       
       // Redirect
-      navigate('/Dashboard');
+      navigate('/varieties');
       
     } catch (err) {
       console.error('❌ Login error:', err);
