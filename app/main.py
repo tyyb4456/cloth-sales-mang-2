@@ -39,7 +39,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# 🔧 UPDATED CORS MIDDLEWARE - FIX FOR NGROK + MOBILE
+# UPDATED CORS MIDDLEWARE - FIX FOR NGROK + MOBILE
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins for ngrok
@@ -76,10 +76,10 @@ def root():
             "Sales Tracking",
             "Supplier Management",
             "Advanced Analytics",
-            "AI-Powered Predictions 🤖",
+            "AI-Powered Predictions ",
             "Smart Insights",
-            "AI Chatbot 💬",
-            "Voice Commands 🎤" 
+            "AI Chatbot ",
+            "Voice Commands " 
         ],
         "docs": "/docs"
     }

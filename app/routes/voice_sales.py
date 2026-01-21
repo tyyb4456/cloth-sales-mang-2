@@ -15,7 +15,8 @@ load_dotenv()
 
 # Import Gemini for AI validation
 try:
-    import google.genai as genai
+    from langchain.chat_models import init_chat_model
+    model = init_chat_model("google_genai:gemini-2.5-flash-lite")
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
@@ -210,10 +211,8 @@ User command: "{transcript}"
         if GEMINI_AVAILABLE:
             api_key = os.getenv("GOOGLE_API_KEY")
             if api_key:
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
                 
-                response = model.generate_content(system_prompt)
+                response = model.invoke(system_prompt)
                 ai_response = response.text.strip()
                 
                 # Extract JSON from response (remove markdown if present)
