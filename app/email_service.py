@@ -18,7 +18,9 @@ FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USERNAME)
 FROM_NAME = os.getenv("FROM_NAME", "ShopSmart")
 
 # Application URL for verification links
-APP_URL = os.getenv("APP_URL", "http://localhost:3000")
+APP_URL = "https://cloth-sales-mang-2.vercel.app/"
+
+print(f"using app url {APP_URL}")
 
 
 class EmailService:

@@ -1,0 +1,15 @@
+python-multipart
+prophet 
+pandas
+numpy
+scikit-learn
+sqlalchemy
+bcrypt
+sqlalchemy
+bcrypt
+pymysql
+pydantic>=2.0
+PyJWT
+langchain
+langchain-google-genai
+python-dotenv

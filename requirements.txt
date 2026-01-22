@@ -1,4 +1,0 @@
-python-multipart
-prophet 
-pandas
-pystan

@@ -1,7 +1,7 @@
 // frontend/src/api/api.js
 import axios from 'axios';
 
-const API_BASE_URL = 'https://stromal-infusive-detra.ngrok-free.dev';
+const API_BASE_URL = 'https://clothsmart-production-dc97.up.railway.app';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
