@@ -1,8 +1,7 @@
-// frontend/src/pages/Varieties.jsx - FIXED WITH AUTHENTICATION
-
+// frontend/src/pages/Varieties.jsx - MOBILE RESPONSIVE
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, X, Save, Package } from 'lucide-react';
-import api from '../api/api'; // ✅ USING AUTHENTICATED API
+import api from '../api/api';
 
 export default function Varieties() {
   const [varieties, setVarieties] = useState([]);
@@ -31,7 +30,6 @@ export default function Varieties() {
   const loadVarieties = async () => {
     setLoading(true);
     try {
-      // ✅ FIXED: Using authenticated API
       const res = await api.get('/varieties/');
       setVarieties(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
@@ -60,11 +58,9 @@ export default function Varieties() {
 
     try {
       if (editingId) {
-        // ✅ FIXED: Using authenticated API
         await api.put(`/varieties/${editingId}`, payload);
         alert('Variety updated successfully!');
       } else {
-        // ✅ FIXED: Using authenticated API
         await api.post('/varieties/', payload);
         alert('Variety created successfully!');
       }
@@ -91,7 +87,6 @@ export default function Varieties() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this variety?')) return;
     try {
-      // ✅ FIXED: Using authenticated API
       await api.delete(`/varieties/${id}`);
       loadVarieties();
       alert('Variety deleted successfully!');
@@ -114,35 +109,45 @@ export default function Varieties() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold text-gray-800">Cloth Varieties</h2>
+    <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      {/* 📱 HEADER - Responsive */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
+            Cloth Varieties
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Manage your product catalog
+          </p>
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center px-5 py-2.5 rounded-lg bg-gray-700 text-white font-medium hover:bg-gray-800 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+          className="w-full sm:w-auto flex items-center justify-center px-4 sm:px-5 py-2.5 rounded-lg bg-gray-700 dark:bg-gray-600 text-white font-medium hover:bg-gray-800 dark:hover:bg-gray-700 transition-all text-sm sm:text-base"
         >
           <Plus size={18} className="mr-2" />
           Add Variety
         </button>
       </div>
 
+      {/* 📱 FORM - Responsive */}
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold text-gray-800">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100">
               {editingId ? 'Edit Variety' : 'New Variety'}
             </h3>
             <button
               onClick={resetForm}
-              className="text-gray-400 hover:text-gray-600 transition"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition p-1"
             >
               <X size={20} />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Variety Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Variety Name *
               </label>
               <input
@@ -150,12 +155,13 @@ export default function Varieties() {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 transition"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base"
               />
             </div>
 
+            {/* Measurement Unit */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Measurement Unit *
               </label>
               <select
@@ -163,7 +169,7 @@ export default function Varieties() {
                 onChange={(e) =>
                   setFormData({ ...formData, measurement_unit: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 transition"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base"
               >
                 {units.map((u) => (
                   <option key={u.value} value={u.value}>
@@ -173,10 +179,11 @@ export default function Varieties() {
               </select>
             </div>
 
+            {/* Standard Length - Conditional */}
             {(formData.measurement_unit === 'meters' ||
               formData.measurement_unit === 'yards') && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Standard Length *
                 </label>
                 <input
@@ -188,13 +195,14 @@ export default function Varieties() {
                   onChange={(e) =>
                     setFormData({ ...formData, standard_length: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 transition"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base"
                 />
               </div>
             )}
 
+            {/* Default Cost Price */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Default Cost Price (₹)
               </label>
               <input
@@ -206,15 +214,16 @@ export default function Varieties() {
                 onChange={(e) =>
                   setFormData({ ...formData, default_cost_price: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 transition"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Optional: This price will be auto-filled when recording sales
               </p>
             </div>
 
+            {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Description
               </label>
               <textarea
@@ -224,14 +233,15 @@ export default function Varieties() {
                   setFormData({ ...formData, description: e.target.value })
                 }
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 transition"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base resize-none"
               />
             </div>
 
-            <div className="flex gap-3 pt-2">
+            {/* 📱 Action Buttons - Stack on mobile */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
               <button
                 type="submit"
-                className="flex items-center px-6 py-3 rounded-lg bg-gray-700 text-white font-medium hover:bg-gray-800 transition hover:shadow-lg"
+                className="w-full sm:w-auto flex items-center justify-center px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-gray-700 dark:bg-gray-600 text-white font-medium hover:bg-gray-800 dark:hover:bg-gray-700 transition text-sm sm:text-base"
               >
                 <Save size={18} className="mr-2" />
                 {editingId ? 'Update' : 'Create'}
@@ -239,7 +249,7 @@ export default function Varieties() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm sm:text-base"
               >
                 Cancel
               </button>
@@ -248,101 +258,166 @@ export default function Varieties() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* 📱 VARIETIES LIST */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-700 mx-auto"></div>
-            <p className="mt-3 text-gray-600">Loading varieties...</p>
+          <div className="p-6 sm:p-8 text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-700 dark:border-gray-300 mx-auto"></div>
+            <p className="mt-3 text-sm sm:text-base text-gray-600 dark:text-gray-400">Loading varieties...</p>
           </div>
         ) : varieties.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Package className="text-gray-400" size={32} />
+          <div className="p-8 sm:p-12 text-center">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Package className="text-gray-400 dark:text-gray-500" size={32} />
             </div>
-            <p className="text-gray-600 font-medium mb-1">No varieties found</p>
-            <p className="text-sm text-gray-400">Add your first cloth variety to get started</p>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium mb-1">No varieties found</p>
+            <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500">Add your first cloth variety to get started</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Unit
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Standard Length
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Default Cost
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {varieties.map((v, idx) => (
-                  <tr key={v.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition`}>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{v.name}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 capitalize">
+          <>
+            {/* 📱 MOBILE: Card View */}
+            <div className="block lg:hidden divide-y divide-gray-200 dark:divide-gray-700">
+              {varieties.map((v) => (
+                <div key={v.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-1 truncate">
+                        {v.name}
+                      </h4>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 capitalize">
                         {v.measurement_unit}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {v.standard_length 
-                        ? `${v.standard_length} ${v.measurement_unit}`
-                        : '—'}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {v.default_cost_price ? (
-                        <span className="font-medium text-green-700">
+                    </div>
+                    <div className="flex items-center gap-1 ml-2">
+                      <button
+                        onClick={() => handleEdit(v)}
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
+                        title="Edit"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(v.id)}
+                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1.5 text-sm">
+                    {v.standard_length && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Standard Length:</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">
+                          {v.standard_length} {v.measurement_unit}
+                        </span>
+                      </div>
+                    )}
+                    {v.default_cost_price && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Default Cost:</span>
+                        <span className="text-green-700 dark:text-green-400 font-medium">
                           ₹{parseFloat(v.default_cost_price).toFixed(2)}
                         </span>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">
-                      {v.description || '—'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleEdit(v)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          title="Edit"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(v.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                          title="Delete"
-                        >
-                          <Trash2 size={18} />
-                        </button>
                       </div>
-                    </td>
+                    )}
+                    {v.description && (
+                      <div className="pt-1">
+                        <p className="text-gray-600 dark:text-gray-400 text-xs line-clamp-2">
+                          {v.description}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 🖥️ DESKTOP: Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Unit
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Standard Length
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Default Cost
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {varieties.map((v, idx) => (
+                    <tr key={v.id} className={`${idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'} hover:bg-gray-100 dark:hover:bg-gray-600 transition`}>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{v.name}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 capitalize">
+                          {v.measurement_unit}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
+                        {v.standard_length 
+                          ? `${v.standard_length} ${v.measurement_unit}`
+                          : '—'}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {v.default_cost_price ? (
+                          <span className="font-medium text-green-700 dark:text-green-400">
+                            ₹{parseFloat(v.default_cost_price).toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400 text-sm max-w-xs truncate">
+                        {v.description || '—'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleEdit(v)}
+                            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(v.id)}
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
+      {/* 📱 Footer Count */}
       {varieties.length > 0 && (
-        <div className="mt-4 text-sm text-gray-500 text-center">
+        <div className="mt-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center">
           Total: {varieties.length} {varieties.length === 1 ? 'variety' : 'varieties'}
         </div>
       )}

@@ -1,10 +1,11 @@
+// frontend/src/pages/SupplierInventory.jsx - MOBILE RESPONSIVE
 import { useState, useEffect } from 'react';
 import { 
   Plus, Calendar, Trash2, TrendingUp, Package, 
   ChevronLeft, ChevronRight, Eye, X, BarChart3,
   Boxes, RotateCcw, CheckCircle, AlertCircle, Search
 } from 'lucide-react';
-import api from '../api/api'; // ✅ USING AUTHENTICATED API
+import api from '../api/api';
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -14,7 +15,7 @@ const formatDate = (date) => {
 export default function EnhancedSupplierInventory() {
   const [varieties, setVarieties] = useState([]);
   const [inventory, setInventory] = useState([]);
-  const [allInventory, setAllInventory] = useState([]); // For overall stats
+  const [allInventory, setAllInventory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showDailyDetails, setShowDailyDetails] = useState(false);
@@ -40,7 +41,7 @@ export default function EnhancedSupplierInventory() {
 
   useEffect(() => {
     loadVarieties();
-    loadAllInventory(); // Load all-time inventory for stats
+    loadAllInventory();
   }, []);
 
   useEffect(() => {
@@ -173,7 +174,6 @@ export default function EnhancedSupplierInventory() {
     setShowDailyDetails(true);
   };
 
-  // Calculate overall statistics
   const overallStats = {
     totalQuantity: allInventory.reduce((sum, item) => sum + parseFloat(item.quantity), 0),
     totalUsed: allInventory.reduce((sum, item) => sum + parseFloat(item.quantity_used), 0),
@@ -199,10 +199,8 @@ export default function EnhancedSupplierInventory() {
   const isCurrentMonth = currentMonth === new Date().getMonth() &&
     currentYear === new Date().getFullYear();
 
-  // Get unique dates for daily view
   const uniqueDates = [...new Set(inventory.map(item => item.supply_date))].sort().reverse();
 
-  // Filter inventory by selected date
   const dailyInventory = selectedDate 
     ? inventory.filter(item => item.supply_date === selectedDate)
     : [];
@@ -211,98 +209,98 @@ export default function EnhancedSupplierInventory() {
   const dailyQuantity = dailyInventory.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
       <div className="max-w-7xl mx-auto">
 
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        {/* 📱 HEADER - Responsive */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
           <div>
-            <h2 className="text-3xl font-semibold text-gray-800 tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 tracking-tight">
               Supplier Inventory Analytics
             </h2>
-            <p className="text-gray-500 mt-1 text-sm">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Complete stock overview and daily tracking
             </p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center px-5 py-2.5 rounded-lg bg-gray-800 text-gray-100 font-medium hover:bg-gray-900 transition shadow-sm"
+            className="w-full sm:w-auto flex items-center justify-center px-4 sm:px-5 py-2.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-gray-100 dark:text-gray-100 font-medium hover:bg-gray-900 dark:hover:bg-gray-600 transition shadow-sm text-sm sm:text-base"
           >
             <Plus size={18} className="mr-2" />
             Add Supply
           </button>
         </div>
 
-        {/* Overall Statistics - Always Visible */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white shadow-lg">
+        {/* 📱 OVERALL STATISTICS - Responsive Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl p-4 sm:p-5 text-white shadow-lg">
             <div className="flex items-center justify-between mb-2">
-              <Boxes className="w-8 h-8 opacity-80" />
+              <Boxes className="w-6 h-6 sm:w-8 sm:h-8 opacity-80" />
             </div>
-            <p className="text-sm opacity-90 mb-1">Total Stock Received</p>
-            <p className="text-3xl font-bold">{overallStats.totalQuantity.toFixed(1)}</p>
+            <p className="text-xs opacity-90 mb-1">Total Stock Received</p>
+            <p className="text-2xl sm:text-3xl font-bold">{overallStats.totalQuantity.toFixed(1)}</p>
             <p className="text-xs opacity-75 mt-1">All-time</p>
           </div>
 
-          <div className="bg-linear-to-br from-green-500 to-green-600 rounded-xl p-5 text-white shadow-lg">
+          <div className="bg-linear-to-br from-green-500 to-green-600 rounded-lg sm:rounded-xl p-4 sm:p-5 text-white shadow-lg">
             <div className="flex items-center justify-between mb-2">
-              <CheckCircle className="w-8 h-8 opacity-80" />
+              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 opacity-80" />
             </div>
-            <p className="text-sm opacity-90 mb-1">Stock Used</p>
-            <p className="text-3xl font-bold">{overallStats.totalUsed.toFixed(1)}</p>
+            <p className="text-xs opacity-90 mb-1">Stock Used</p>
+            <p className="text-2xl sm:text-3xl font-bold">{overallStats.totalUsed.toFixed(1)}</p>
             <p className="text-xs opacity-75 mt-1">
               {overallStats.totalQuantity > 0 ? ((overallStats.totalUsed / overallStats.totalQuantity) * 100).toFixed(1) : 0}% utilized
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-lg">
+          <div className="bg-linear-to-br from-orange-500 to-orange-600 rounded-lg sm:rounded-xl p-4 sm:p-5 text-white shadow-lg">
             <div className="flex items-center justify-between mb-2">
-              <RotateCcw className="w-8 h-8 opacity-80" />
+              <RotateCcw className="w-6 h-6 sm:w-8 sm:h-8 opacity-80" />
             </div>
-            <p className="text-sm opacity-90 mb-1">Stock Returned</p>
-            <p className="text-3xl font-bold">{overallStats.totalReturned.toFixed(1)}</p>
+            <p className="text-xs opacity-90 mb-1">Stock Returned</p>
+            <p className="text-2xl sm:text-3xl font-bold">{overallStats.totalReturned.toFixed(1)}</p>
             <p className="text-xs opacity-75 mt-1">
               {overallStats.totalQuantity > 0 ? ((overallStats.totalReturned / overallStats.totalQuantity) * 100).toFixed(1) : 0}% returned
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white shadow-lg">
+          <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-lg sm:rounded-xl p-4 sm:p-5 text-white shadow-lg">
             <div className="flex items-center justify-between mb-2">
-              <Package className="w-8 h-8 opacity-80" />
+              <Package className="w-6 h-6 sm:w-8 sm:h-8 opacity-80" />
             </div>
-            <p className="text-sm opacity-90 mb-1">Stock Remaining</p>
-            <p className="text-3xl font-bold">{overallStats.totalRemaining.toFixed(1)}</p>
+            <p className="text-xs opacity-90 mb-1">Stock Remaining</p>
+            <p className="text-2xl sm:text-3xl font-bold">{overallStats.totalRemaining.toFixed(1)}</p>
             <p className="text-xs opacity-75 mt-1">Available now</p>
           </div>
 
-          <div className="bg-linear-to-br from-gray-700 to-gray-800 rounded-xl p-5 text-white shadow-lg">
+          <div className="bg-linear-to-br from-gray-700 to-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-5 text-white shadow-lg col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between mb-2">
-              <TrendingUp className="w-8 h-8 opacity-80" />
+              <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 opacity-80" />
             </div>
-            <p className="text-sm opacity-90 mb-1">Total Value</p>
-            <p className="text-3xl font-bold">₹{(overallStats.totalValue / 1000).toFixed(1)}K</p>
+            <p className="text-xs opacity-90 mb-1">Total Value</p>
+            <p className="text-2xl sm:text-3xl font-bold">₹{(overallStats.totalValue / 1000).toFixed(1)}K</p>
             <p className="text-xs opacity-75 mt-1">Investment</p>
           </div>
         </div>
 
-        {/* Daily Details Quick Access */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+        {/* 📱 DAILY DETAILS - Responsive Grid */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-4 sm:mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-gray-600" />
-              <h3 className="text-lg font-semibold text-gray-800">Daily Stock Details</h3>
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">Daily Stock Details</h3>
             </div>
-            <span className="text-sm text-gray-500">{uniqueDates.length} days with activity</span>
+            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{uniqueDates.length} days with activity</span>
           </div>
 
           {uniqueDates.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-6 sm:py-8 text-gray-400 dark:text-gray-500">
               <Calendar size={48} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">No supplies recorded yet</p>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
                 {uniqueDates.slice(0, 14).map(date => {
                   const dayData = inventory.filter(item => item.supply_date === date);
                   const dayTotal = dayData.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
@@ -311,20 +309,20 @@ export default function EnhancedSupplierInventory() {
                     <button
                       key={date}
                       onClick={() => showDailyDetailsModal(date)}
-                      className="p-3 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-left group"
+                      className="p-2 sm:p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition text-left group"
                     >
-                      <div className="text-xs text-gray-500 mb-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                         {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
-                      <div className="text-sm font-semibold text-gray-900">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {dayTotal.toFixed(0)} units
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {dayData.length} {dayData.length === 1 ? 'supply' : 'supplies'}
                       </div>
-                      <div className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition mt-1 flex items-center gap-1">
+                      <div className="text-xs text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition mt-1 flex items-center gap-1">
                         <Eye size={12} />
-                        View Details
+                        View
                       </div>
                     </button>
                   );
@@ -333,7 +331,7 @@ export default function EnhancedSupplierInventory() {
 
               {uniqueDates.length > 14 && (
                 <div className="mt-3 text-center">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     Showing 14 of {uniqueDates.length} days
                   </p>
                 </div>
@@ -342,25 +340,25 @@ export default function EnhancedSupplierInventory() {
           )}
         </div>
 
-        {/* Month Navigator */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        {/* 📱 MONTH NAVIGATOR - Responsive */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4 sm:mb-6">
           <div className="flex items-center justify-between">
             <button
               onClick={() => changeMonth(-1)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
             >
               <ChevronLeft size={20} />
             </button>
 
             <div className="text-center">
-              <h3 className="text-2xl font-semibold text-gray-800 tracking-tight">
+              <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-gray-100 tracking-tight">
                 {monthNames[currentMonth]} {currentYear}
               </h3>
 
               {!isCurrentMonth && (
                 <button
                   onClick={goToCurrentMonth}
-                  className="mt-1 text-sm text-gray-500 hover:text-gray-700 transition"
+                  className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
                 >
                   Go to current month
                 </button>
@@ -369,66 +367,66 @@ export default function EnhancedSupplierInventory() {
 
             <button
               onClick={() => changeMonth(1)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
             >
               <ChevronRight size={20} />
             </button>
           </div>
         </div>
 
-        {/* Monthly Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
+        {/* 📱 MONTHLY SUMMARY - Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-gray-100 rounded-lg">
-                <Package className="w-6 h-6 text-gray-600" />
+              <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <Package className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
               </div>
             </div>
-            <p className="text-sm font-medium text-gray-500">Total Supplies This Month</p>
-            <h3 className="text-3xl font-semibold text-gray-800 mt-1">
+            <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Total Supplies This Month</p>
+            <h3 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 mt-1">
               {inventory.length}
             </h3>
-            <p className="text-sm text-gray-500 mt-1">deliveries</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">deliveries</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
+          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-gray-100 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-gray-600" />
+              <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
               </div>
             </div>
-            <p className="text-sm font-medium text-gray-500">Monthly Investment</p>
-            <h3 className="text-3xl font-semibold text-gray-800 mt-1">
+            <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Investment</p>
+            <h3 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 mt-1">
               ₹{(totalAmount / 1000).toFixed(1)}K
             </h3>
-            <p className="text-sm text-gray-500 mt-1">spent on supplies</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">spent on supplies</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
+          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-gray-100 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-gray-600" />
+              <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
               </div>
             </div>
-            <p className="text-sm font-medium text-gray-500">Active Suppliers</p>
-            <h3 className="text-3xl font-semibold text-gray-800 mt-1">
+            <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Active Suppliers</p>
+            <h3 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 mt-1">
               {Object.keys(groupedBySupplier).length}
             </h3>
-            <p className="text-sm text-gray-500 mt-1">this month</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">this month</p>
           </div>
         </div>
 
-        {/* Supply Form */}
+        {/* 📱 SUPPLY FORM - Responsive Modal */}
         {showForm && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-4 sm:mb-6">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 sm:mb-6">
               Record New Supply
             </h3>
 
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                 <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                     Supplier Name *
                   </label>
                   <input
@@ -438,13 +436,13 @@ export default function EnhancedSupplierInventory() {
                       setFormData({ ...formData, supplier_name: e.target.value })
                     }
                     placeholder="Enter supplier name"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 transition"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base"
                     required
                   />
                 </div>
 
                 <div className="relative">
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                     Cloth Variety *
                   </label>
                   <input
@@ -456,14 +454,14 @@ export default function EnhancedSupplierInventory() {
                     }}
                     onFocus={() => setShowVarietyDropdown(true)}
                     placeholder="Search variety..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 transition"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base"
                     required
                   />
 
                   {showVarietyDropdown && (
-                    <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
+                    <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg">
                       {filteredVarieties.length === 0 ? (
-                        <div className="px-4 py-2 text-gray-500">
+                        <div className="px-4 py-2 text-gray-500 dark:text-gray-400 text-sm">
                           No varieties found
                         </div>
                       ) : (
@@ -471,12 +469,12 @@ export default function EnhancedSupplierInventory() {
                           <div
                             key={v.id}
                             onClick={() => handleVarietySelect(v)}
-                            className="px-4 py-2 cursor-pointer hover:bg-gray-100 transition border-b border-gray-100 last:border-0"
+                            className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition border-b border-gray-100 dark:border-gray-700 last:border-0"
                           >
-                            <div className="font-medium text-gray-800">
+                            <div className="font-medium text-gray-800 dark:text-gray-100 text-sm">
                               {v.name}
                             </div>
-                            <div className="text-xs text-gray-500 capitalize">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
                               {v.measurement_unit}
                             </div>
                           </div>
@@ -487,7 +485,7 @@ export default function EnhancedSupplierInventory() {
                 </div>
 
                 <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                     Quantity {selectedVariety && `(${selectedVariety.measurement_unit})`} *
                   </label>
                   <input
@@ -503,13 +501,13 @@ export default function EnhancedSupplierInventory() {
                         ? `Enter ${selectedVariety.measurement_unit}`
                         : 'Select variety first'
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 transition"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                     Price per {selectedVariety
                       ? selectedVariety.measurement_unit.slice(0, -1)
                       : 'Unit'} (₹) *
@@ -523,13 +521,13 @@ export default function EnhancedSupplierInventory() {
                       setFormData({ ...formData, price_per_item: e.target.value })
                     }
                     placeholder="Price per unit"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 transition"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base"
                     required
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
+                <div className="sm:col-span-2">
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                     Supply Date *
                   </label>
                   <input
@@ -538,95 +536,148 @@ export default function EnhancedSupplierInventory() {
                     onChange={(e) =>
                       setFormData({ ...formData, supply_date: e.target.value })
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 transition"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-400/20 dark:bg-gray-700 dark:text-gray-100 transition text-sm sm:text-base"
                     required
                   />
                 </div>
 
-                {formData.quantity && formData.price_per_item && (
-                  <div className="md:col-span-2 p-4 bg-gray-100 border border-gray-200 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">
-                          Total Amount
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.quantity} × ₹{formData.price_per_item}
-                        </p>
-                      </div>
-                      <p className="text-3xl font-semibold text-gray-800">
-                        ₹{total.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                )}
+  {formData.quantity && formData.price_per_item && (
+  <div className="sm:col-span-2 flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
+    <button
+      type="submit"
+      className="w-full sm:flex-1 px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-gray-800 dark:bg-gray-700 text-gray-100 font-medium hover:bg-gray-900 dark:hover:bg-gray-600 transition text-sm sm:text-base"
+    >
+      Add Supply & Update Stock
+    </button>
 
-                <div className="md:col-span-2 flex gap-3 pt-2">
-                  <button
-                    type="submit"
-                    className="px-6 py-3 rounded-lg bg-gray-800 text-gray-100 font-medium hover:bg-gray-900 transition"
-                  >
-                    Add Supply & Update Stock
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowForm(false);
-                      setSelectedVariety(null);
-                      setVarietySearch('');
-                    }}
-                    className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-                  >
-                    Cancel
-                  </button>
-                </div>
+    <button
+      type="button"
+      onClick={() => {
+        setShowForm(false);
+        setSelectedVariety(null);
+        setVarietySearch('');
+      }}
+      className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm sm:text-base"
+    >
+      Cancel
+    </button>
+  </div>
+)}
+
               </div>
+            
+          
             </form>
           </div>
         )}
+        
 
-        {/* Monthly Inventory List */}
-        <div className="space-y-6">
+        {/* 📱 MONTHLY INVENTORY LIST */}
+        <div className="space-y-4 sm:space-y-6">
           {loading ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-300 border-t-gray-600 mx-auto"></div>
-              <p className="text-gray-500 mt-4">Loading inventory...</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-2 border-gray-300 dark:border-gray-600 border-t-gray-600 dark:border-t-gray-300 mx-auto"></div>
+              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-4">Loading inventory...</p>
             </div>
           ) : inventory.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-              <Package size={64} className="mx-auto mb-4 text-gray-300" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No supplies for this month</h3>
-              <p className="text-gray-500">Add your first supply to get started</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
+              <Package size={48} className="mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No supplies for this month</h3>
+              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">Add your first supply to get started</p>
             </div>
           ) : (
             Object.entries(groupedBySupplier).map(([supplier, items]) => {
               const supplierTotal = items.reduce((sum, item) => sum + parseFloat(item.total_amount), 0);
 
               return (
-                <div key={supplier} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="bg-gray-100 px-6 py-4 border-b border-gray-200">
-                    <div className="flex justify-between items-center">
+                <div key={supplier} className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="bg-linear-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-800">
-                          {supplier}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {items.length} deliveries
-                        </p>
+                        <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">{supplier}</h3>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{items.length} deliveries</p>
                       </div>
-
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">Total Amount</p>
-                        <p className="text-2xl font-semibold text-gray-800">
-                          ₹{supplierTotal.toFixed(2)}
-                        </p>
+                      <div className="text-left sm:text-right">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
+                        <p className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">₹{supplierTotal.toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  {/* 📱 Mobile: Card View */}
+                  <div className="block lg:hidden divide-y divide-gray-200 dark:divide-gray-700">
+                    {items.map((item, idx) => (
+                      <div key={item.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                                {item.variety.name}
+                              </h4>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 capitalize">
+                                {item.variety.measurement_unit}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                              {new Date(item.supply_date).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition ml-2"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Quantity</span>
+                            <span className="text-gray-800 dark:text-gray-200 font-semibold">{parseFloat(item.quantity).toFixed(1)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Price/Unit</span>
+                            <span className="text-gray-800 dark:text-gray-200 font-semibold">₹{parseFloat(item.price_per_item).toFixed(2)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Total</span>
+                            <span className="text-gray-800 dark:text-gray-200 font-semibold">₹{parseFloat(item.total_amount).toFixed(2)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Used</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                              {parseFloat(item.quantity_used).toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-sm mt-2">
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Returned</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300">
+                              {parseFloat(item.quantity_returned || 0).toFixed(1)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Remaining</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                              {parseFloat(item.quantity_remaining).toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 🖥️ Desktop: Table View */}
+                  <div className="hidden lg:block overflow-x-auto">
                     <table className="w-full border-collapse">
-                      <thead className="bg-gray-50 text-gray-600 text-xs">
+                      <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs">
                         <tr>
                           <th className="px-4 py-3 text-left">Date</th>
                           <th className="px-4 py-3 text-left">Variety</th>
@@ -641,57 +692,41 @@ export default function EnhancedSupplierInventory() {
                       </thead>
                       <tbody className="text-sm">
                         {items.map((item, idx) => (
-                          <tr key={item.id} className={`border-t ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50/30 transition`}>
-                            <td className="px-4 py-3 text-gray-600">
-                              {new Date(item.supply_date).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric'
+                          <tr key={item.id} className={`border-t ${idx % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700"} hover:bg-gray-100 dark:hover:bg-gray-600 transition`}>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                              {new Date(item.supply_date).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric' 
                               })}
                             </td>
-
                             <td className="px-4 py-3">
-                              <div className="font-medium text-gray-800">
-                                {item.variety.name}
-                              </div>
-                              <div className="text-xs text-gray-500 capitalize">
-                                {item.variety.measurement_unit}
-                              </div>
+                              <div className="font-medium text-gray-900 dark:text-gray-100">{item.variety.name}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{item.variety.measurement_unit}</div>
                             </td>
-
-                            <td className="px-4 py-3 text-center font-medium text-gray-700">
-                              {parseFloat(item.quantity).toFixed(1)}
-                            </td>
-
-                            <td className="px-4 py-3 text-right text-gray-700">
-                              ₹{parseFloat(item.price_per_item).toFixed(2)}
-                            </td>
-
-                            <td className="px-4 py-3 text-right font-semibold text-gray-800">
+                            <td className="px-4 py-3 text-center font-medium">{parseFloat(item.quantity).toFixed(1)}</td>
+                            <td className="px-4 py-3 text-right">₹{parseFloat(item.price_per_item).toFixed(2)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-gray-100">
                               ₹{parseFloat(item.total_amount).toFixed(2)}
                             </td>
-
                             <td className="px-4 py-3 text-center">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
                                 {parseFloat(item.quantity_used).toFixed(1)}
                               </span>
                             </td>
-
                             <td className="px-4 py-3 text-center">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300">
                                 {parseFloat(item.quantity_returned || 0).toFixed(1)}
                               </span>
                             </td>
-
                             <td className="px-4 py-3 text-center">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
                                 {parseFloat(item.quantity_remaining).toFixed(1)}
                               </span>
                             </td>
-
                             <td className="px-4 py-3 text-center">
                               <button
                                 onClick={() => handleDelete(item.id)}
-                                className="text-gray-400 hover:text-red-400 transition"
+                                className="text-gray-400 dark:text-gray-500 hover:text-red-400 dark:hover:text-red-400 transition"
                                 title="Delete"
                               >
                                 <Trash2 size={18} />
@@ -708,15 +743,15 @@ export default function EnhancedSupplierInventory() {
           )}
         </div>
 
-        {/* Daily Details Modal */}
+        {/* 📱 DAILY DETAILS MODAL - Responsive */}
         {showDailyDetails && selectedDate && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
               {/* Modal Header */}
-              <div className="bg-linear-to-r from-blue-500 to-blue-600 px-6 py-5 flex justify-between items-center">
+              <div className="bg-linear-to-r from-blue-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
                 <div>
-                  <h3 className="text-2xl font-bold text-white">Daily Stock Details</h3>
-                  <p className="text-blue-100 text-sm mt-1">
+                  <h3 className="text-xl sm:text-2xl font-bold text-white">Daily Stock Details</h3>
+                  <p className="text-blue-100 text-xs sm:text-sm mt-1">
                     {new Date(selectedDate).toLocaleDateString('en-US', {
                       weekday: 'long',
                       year: 'numeric',
@@ -734,67 +769,67 @@ export default function EnhancedSupplierInventory() {
               </div>
 
               {/* Summary Stats */}
-              <div className="grid grid-cols-3 gap-4 p-6 border-b border-gray-200">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="text-center">
-                  <Package className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-gray-900">{dailyQuantity.toFixed(1)}</p>
-                  <p className="text-sm text-gray-600">Total Quantity</p>
+                  <Package className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 mx-auto mb-2" />
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{dailyQuantity.toFixed(1)}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Quantity</p>
                 </div>
                 <div className="text-center">
-                  <TrendingUp className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-gray-900">₹{dailyTotal.toFixed(2)}</p>
-                  <p className="text-sm text-gray-600">Total Value</p>
+                  <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 mx-auto mb-2" />
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">₹{dailyTotal.toFixed(2)}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Value</p>
                 </div>
                 <div className="text-center">
-                  <BarChart3 className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-gray-900">{dailyInventory.length}</p>
-                  <p className="text-sm text-gray-600">Supplies</p>
+                  <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 mx-auto mb-2" />
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{dailyInventory.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Supplies</p>
                 </div>
               </div>
 
               {/* Details List */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
                   {dailyInventory.map((item) => (
-                    <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 transition">
+                    <div key={item.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 hover:border-blue-500 transition">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 className="font-semibold text-gray-900 text-lg">{item.supplier_name}</h4>
-                          <p className="text-sm text-gray-600 capitalize">{item.variety.name} • {item.variety.measurement_unit}</p>
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-base sm:text-lg">{item.supplier_name}</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 capitalize">{item.variety.name} • {item.variety.measurement_unit}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xl font-bold text-blue-600">₹{parseFloat(item.total_amount).toFixed(2)}</p>
-                          <p className="text-xs text-gray-500">Total Amount</p>
+                          <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400">₹{parseFloat(item.total_amount).toFixed(2)}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Total Amount</p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-4 gap-3">
-                        <div className="bg-gray-50 rounded-lg p-3 text-center">
-                          <p className="text-xs text-gray-600 mb-1">Quantity</p>
-                          <p className="text-lg font-bold text-gray-900">{parseFloat(item.quantity).toFixed(1)}</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 sm:p-3 text-center">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Quantity</p>
+                          <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">{parseFloat(item.quantity).toFixed(1)}</p>
                         </div>
-                        <div className="bg-blue-50 rounded-lg p-3 text-center">
-                          <p className="text-xs text-gray-600 mb-1">Used</p>
-                          <p className="text-lg font-bold text-blue-700">{parseFloat(item.quantity_used).toFixed(1)}</p>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 sm:p-3 text-center">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Used</p>
+                          <p className="text-base sm:text-lg font-bold text-blue-700 dark:text-blue-400">{parseFloat(item.quantity_used).toFixed(1)}</p>
                         </div>
-                        <div className="bg-red-50 rounded-lg p-3 text-center">
-                          <p className="text-xs text-gray-600 mb-1">Returned</p>
-                          <p className="text-lg font-bold text-red-700">{parseFloat(item.quantity_returned || 0).toFixed(1)}</p>
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-2 sm:p-3 text-center">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Returned</p>
+                          <p className="text-base sm:text-lg font-bold text-red-700 dark:text-red-400">{parseFloat(item.quantity_returned || 0).toFixed(1)}</p>
                         </div>
-                        <div className="bg-green-50 rounded-lg p-3 text-center">
-                          <p className="text-xs text-gray-600 mb-1">Remaining</p>
-                          <p className="text-lg font-bold text-green-700">{parseFloat(item.quantity_remaining).toFixed(1)}</p>
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 sm:p-3 text-center">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Remaining</p>
+                          <p className="text-base sm:text-lg font-bold text-green-700 dark:text-green-400">{parseFloat(item.quantity_remaining).toFixed(1)}</p>
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between text-sm">
-                        <span className="text-gray-600">
-                          Price/Unit: <span className="font-semibold text-gray-900">₹{parseFloat(item.price_per_item).toFixed(2)}</span>
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:justify-between gap-2 text-xs sm:text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Price/Unit: <span className="font-semibold text-gray-900 dark:text-gray-100">₹{parseFloat(item.price_per_item).toFixed(2)}</span>
                         </span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        <span className={`px-2 py-1 rounded text-xs font-medium self-start sm:self-auto ${
                           parseFloat(item.quantity_remaining) > 0 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                         }`}>
                           {parseFloat(item.quantity_remaining) > 0 ? 'In Stock' : 'Fully Used'}
                         </span>
@@ -805,10 +840,10 @@ export default function EnhancedSupplierInventory() {
               </div>
 
               {/* Modal Footer */}
-              <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
+              <div className="border-t border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 dark:bg-gray-800">
                 <button
                   onClick={() => setShowDailyDetails(false)}
-                  className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition font-medium"
+                  className="w-full px-4 py-2.5 sm:py-3 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-900 dark:hover:bg-gray-600 transition font-medium text-sm sm:text-base"
                 >
                   Close
                 </button>

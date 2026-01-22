@@ -1,11 +1,8 @@
-// frontend/src/pages/Sales.jsx - FIXED WITH AUTHENTICATION
-
+// frontend/src/pages/Sales.jsx - MOBILE RESPONSIVE
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, Trash2, Package, DollarSign, TrendingUp , Send } from 'lucide-react';
+import { Plus, Calendar, Trash2, Package, DollarSign, TrendingUp } from 'lucide-react';
 import SalesForm from '../components/SaleForm';
-import api from '../api/api'; // USING AUTHENTICATED API
-// import { sendInvoiceWhatsApp } from '../api/api';
-
+import api from '../api/api';
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -36,26 +33,12 @@ export default function EnhancedSalesWithPriceSelector() {
 
   const loadVarieties = async () => {
     try {
-      // Using authenticated API
       const response = await api.get('/varieties/');
       setVarieties(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading varieties:', error);
     }
   };
-
-  // const handleSendWhatsApp = async (sale) => {
-  //   const phone = prompt('Enter customer WhatsApp number (with country code, e.g., +923001234567):');
-    
-  //   if (!phone) return;
-    
-  //   try {
-  //     await sendInvoiceWhatsApp(sale.id, phone);
-  //     alert('Invoice sent via WhatsApp!');
-  //   } catch (error) {
-  //     alert('Failed to send: ' + (error.response?.data?.detail || 'Unknown error'));
-  //   }
-  // };
 
   const formatQuantityWithUnit = (quantity, unit) => {
     const qty = parseFloat(quantity);
@@ -66,7 +49,6 @@ export default function EnhancedSalesWithPriceSelector() {
 
   const loadSupplierInventories = async () => {
     try {
-      // ✅ FIXED: Using authenticated API
       const response = await api.get('/supplier/inventory');
       setSupplierInventories(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
@@ -77,7 +59,6 @@ export default function EnhancedSalesWithPriceSelector() {
   const loadSales = async () => {
     setLoading(true);
     try {
-      // ✅ FIXED: Using authenticated API
       const response = await api.get(`/sales/date/${selectedDate}`);
       setSales(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
@@ -91,7 +72,6 @@ export default function EnhancedSalesWithPriceSelector() {
     if (!confirm('Delete this sale? This action cannot be undone.')) return;
 
     try {
-      // ✅ FIXED: Using authenticated API
       await api.delete(`/sales/${id}`);
       loadSales();
       loadSupplierInventories();
@@ -109,46 +89,47 @@ export default function EnhancedSalesWithPriceSelector() {
   }, 0);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
 
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* 📱 HEADER - Responsive */}
+        <div className="mb-4 sm:mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-4xl font-bold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-gray-100">
                 Sales Management
               </h1>
-              <p className="mt-2 text-gray-600">Record and track your daily sales with precision</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Record and track your daily sales with precision
+              </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative group">
-                <div className="absolute -inset-0.5 bg-linear-to-r from-gray-600 to-gray-800 rounded-xl blur opacity-20 group-hover:opacity-30 transition"></div>
-                <div className="relative flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
-                  <Calendar size={20} className="text-gray-500" />
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="bg-transparent text-gray-800 font-medium focus:outline-none"
-                  />
-                </div>
+            {/* 📱 Actions - Stack on mobile */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              {/* Date Picker */}
+              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 shadow-sm">
+                <Calendar size={18} className="text-gray-500 dark:text-gray-400 shrink-0" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-sm sm:text-base text-gray-800 dark:text-gray-100 font-medium focus:outline-none min-w-0 flex-1"
+                />
               </div>
 
+              {/* Record Sale Button */}
               <button
                 onClick={() => setShowForm(!showForm)}
-                className="relative group overflow-hidden bg-linear-to-r from-gray-700 to-gray-800 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+                className="w-full sm:w-auto flex items-center justify-center bg-gray-700 dark:bg-gray-600 text-white px-4 sm:px-6 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:bg-gray-800 dark:hover:bg-gray-700 transition-all text-sm sm:text-base"
               >
-                <div className="absolute inset-0 bg-linear-to-r from-gray-600 to-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative flex items-center gap-2">
-                  <Plus size={20} />
-                  <span>Record Sale</span>
-                </div>
+                <Plus size={18} className="mr-2" />
+                <span>Record Sale</span>
               </button>
             </div>
           </div>
         </div>
 
+        {/* Sales Form Modal */}
         <SalesForm
           show={showForm}
           onClose={() => setShowForm(false)}
@@ -158,56 +139,51 @@ export default function EnhancedSalesWithPriceSelector() {
           }}
           varieties={varieties}
           supplierInventories={supplierInventories}
-          API_BASE_URL="http://127.0.0.1:8000"
         />
 
+        {/* 📱 SUMMARY CARDS - Responsive Grid */}
         {!loading && sales.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-linear-to-r from-blue-500 to-cyan-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition"></div>
-              <div className="relative bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-blue-100 rounded-xl">
-                    <Package className="text-blue-600" size={28} />
-                  </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
+            {/* Items Sold Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm sm:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="p-2.5 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg sm:rounded-xl">
+                  <Package className="text-blue-600 dark:text-blue-400 w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
                 </div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Items Sold</p>
-                <p className="text-4xl font-bold text-gray-800">{totalItemsSold}</p>
               </div>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Items Sold</p>
+              <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-gray-100">{totalItemsSold}</p>
             </div>
 
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-linear-to-r from-purple-500 to-pink-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition"></div>
-              <div className="relative bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-purple-100 rounded-xl">
-                    <DollarSign className="text-purple-600" size={28} />
-                  </div>
+            {/* Total Sales Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm sm:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="p-2.5 sm:p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg sm:rounded-xl">
+                  <DollarSign className="text-purple-600 dark:text-purple-400 w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
                 </div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Total Sales</p>
-                <p className="text-4xl font-bold text-gray-800">₹{totalSales.toFixed(2)}</p>
               </div>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Sales</p>
+              <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-gray-100">₹{totalSales.toFixed(2)}</p>
             </div>
 
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-linear-to-r from-green-500 to-emerald-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition"></div>
-              <div className="relative bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-3 bg-green-100 rounded-xl">
-                    <TrendingUp className="text-green-600" size={28} />
-                  </div>
+            {/* Total Profit Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm sm:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="p-2.5 sm:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg sm:rounded-xl">
+                  <TrendingUp className="text-green-600 dark:text-green-400 w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
                 </div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Total Profit</p>
-                <p className="text-4xl font-bold text-green-600">₹{totalProfit.toFixed(2)}</p>
               </div>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Profit</p>
+              <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600 dark:text-green-400">₹{totalProfit.toFixed(2)}</p>
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-200 bg-linear-to-r from-gray-50 to-white">
-            <h3 className="text-xl font-bold text-gray-800">Sales Records</h3>
-            <p className="text-sm text-gray-600 mt-1">
+        {/* 📱 SALES LIST */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm sm:shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+            <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-800 dark:text-gray-100">Sales Records</h3>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
               {new Date(selectedDate).toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
@@ -218,126 +194,196 @@ export default function EnhancedSalesWithPriceSelector() {
           </div>
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-gray-600"></div>
-              <p className="mt-4 text-gray-600 font-medium">Loading sales...</p>
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16">
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-4 border-gray-200 dark:border-gray-700 border-t-gray-600 dark:border-t-gray-300"></div>
+              <p className="mt-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">Loading sales...</p>
             </div>
           ) : sales.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Package className="text-gray-400" size={40} />
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                <Package className="text-gray-400 dark:text-gray-500 w-8 h-8 sm:w-10 sm:h-10" />
               </div>
-              <p className="text-gray-600 font-semibold text-lg">No sales recorded</p>
-              <p className="text-sm text-gray-400 mt-1">Start by recording your first sale</p>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-semibold">No sales recorded</p>
+              <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-1">Start by recording your first sale</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Salesperson</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Variety</th>
-                    <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Type</th>
-                    <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Payment</th>
-                    <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Qty</th>
-                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Sale</th>
-                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Profit</th>
-                    <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Time</th>
-                    <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {sales.map((item, idx) => (
-                    <tr
-                      key={item.id}
-                      className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-gray-800 capitalize">{item.salesperson_name}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-800">{item.variety.name}</div>
-                        <div className="text-xs text-gray-500 capitalize mt-1">{item.variety.measurement_unit}</div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${item.stock_type === 'new_stock'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
-                          }`}>
-                          {item.stock_type === 'new_stock' ? '✓ New' : 'Old'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${item.payment_status === 'paid'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-orange-100 text-orange-700'
-                          }`}>
-                          {item.payment_status === 'paid' ? '✓ Paid' : '⏱ Loan'}
-                        </span>
-                        {item.customer_name && (
-                          <div className="text-xs text-gray-600 mt-1">{item.customer_name}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-bold text-gray-800">
+            <>
+              {/* 📱 MOBILE: Card View */}
+              <div className="block lg:hidden divide-y divide-gray-200 dark:divide-gray-700">
+                {sales.map((item) => (
+                  <div key={item.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    {/* Header Row */}
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-1 truncate">
+                          {item.variety.name}
+                        </h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">
+                          {item.salesperson_name}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition ml-2"
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Quantity</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">
                           {formatQuantityWithUnit(item.quantity, item.variety.measurement_unit)}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="font-bold text-gray-800">
+                      </div>
+
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Sale Amount</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">
                           ₹{(parseFloat(item.selling_price) * item.quantity).toFixed(2)}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          ₹{parseFloat(item.selling_price).toFixed(2)}/unit
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="font-bold text-green-600">
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Profit</span>
+                        <span className="text-green-600 dark:text-green-400 font-semibold">
                           ₹{parseFloat(item.profit).toFixed(2)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="text-sm text-gray-600">
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400 text-xs block mb-0.5">Time</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">
                           {new Date(item.sale_timestamp).toLocaleTimeString('en-US', {
                             hour: '2-digit',
                             minute: '2-digit',
                             hour12: true
                           })}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete sale"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
-                      {/* <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleSendWhatsApp(item)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                            title="Send via WhatsApp"
-                          >
-                            <Send size={18} />
-                          </button>
+                      </div>
+                    </div>
 
+                    {/* Badges */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        item.stock_type === 'new_stock'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}>
+                        {item.stock_type === 'new_stock' ? '✓ New Stock' : 'Old Stock'}
+                      </span>
+                      
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        item.payment_status === 'paid'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                          : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                      }`}>
+                        {item.payment_status === 'paid' ? '✓ Paid' : '⏱ Loan'}
+                      </span>
+                      
+                      {item.customer_name && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                          {item.customer_name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 🖥️ DESKTOP: Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Salesperson</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Variety</th>
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Payment</th>
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Qty</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Sale</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Profit</th>
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Time</th>
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {sales.map((item, idx) => (
+                      <tr
+                        key={item.id}
+                        className={`${idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'} hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors`}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-gray-800 dark:text-gray-100 capitalize">{item.salesperson_name}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-gray-800 dark:text-gray-100">{item.variety.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 capitalize mt-1">{item.variety.measurement_unit}</div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${item.stock_type === 'new_stock'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                            }`}>
+                            {item.stock_type === 'new_stock' ? '✓ New' : 'Old'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${item.payment_status === 'paid'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                              : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                            }`}>
+                            {item.payment_status === 'paid' ? '✓ Paid' : '⏱ Loan'}
+                          </span>
+                          {item.customer_name && (
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{item.customer_name}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="font-bold text-gray-800 dark:text-gray-100">
+                            {formatQuantityWithUnit(item.quantity, item.variety.measurement_unit)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="font-bold text-gray-800 dark:text-gray-100">
+                            ₹{(parseFloat(item.selling_price) * item.quantity).toFixed(2)}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            ₹{parseFloat(item.selling_price).toFixed(2)}/unit
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="font-bold text-green-600 dark:text-green-400">
+                            ₹{parseFloat(item.profit).toFixed(2)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {new Date(item.sale_timestamp).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
                           <button
                             onClick={() => handleDelete(item.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                             title="Delete sale"
                           >
                             <Trash2 size={18} />
                           </button>
-                        </div>
-                      </td> */}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>
