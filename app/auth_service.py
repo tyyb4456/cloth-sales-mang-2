@@ -88,7 +88,7 @@ class AuthService:
         # Generate email verification token
         verification_token = AuthService.create_verification_token(owner_user.id, db)
         
-        # 🆕 SEND VERIFICATION EMAIL
+        # SEND VERIFICATION EMAIL
         from email_service import EmailService
         EmailService.send_verification_email(
             email=owner_user.email,
@@ -213,11 +213,12 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired"
             )
-        except jwt.JWTError:
+        except jwt.PyJWTError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
+
     
     @staticmethod
     def create_user_session(user_id: int, access_token: str, refresh_token: str, 

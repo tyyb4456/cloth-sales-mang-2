@@ -468,21 +468,6 @@ def check_voice_health():
         "message": "Voice commands ready!" if (hf_available and gemini_available) else "Configure API keys"
     }
 
-# ==================== HEALTH CHECK ====================
-
-@router.get("/health")
-def check_voice_health():
-    """Check voice features configuration"""
-    hf_available = bool(os.getenv("HUGGINGFACE_API_TOKEN"))
-    gemini_available = GEMINI_AVAILABLE and bool(os.getenv("GOOGLE_API_KEY"))
-    
-    return {
-        "huggingface_whisper": hf_available,
-        "gemini_structured_output": gemini_available,
-        "status": "ready" if (hf_available and gemini_available) else "incomplete",
-        "message": "Voice commands ready!" if (hf_available and gemini_available) else "Configure API keys"
-    }
-
 
 # ==================== HELPER: GET VOICE EXAMPLES ====================
 

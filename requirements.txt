@@ -1,10 +1,8 @@
 python-multipart
-prophet 
+prophet
 pandas
 numpy
 scikit-learn
-sqlalchemy
-bcrypt
 sqlalchemy
 bcrypt
 pymysql
@@ -13,3 +11,6 @@ PyJWT
 langchain
 langchain-google-genai
 python-dotenv
+fastapi
+uvicorn[standard]
+pydantic[email]

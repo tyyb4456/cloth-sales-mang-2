@@ -17,7 +17,7 @@ except ImportError:
     SKLEARN_AVAILABLE = False
     print("⚠️ Warning: scikit-learn not installed. Using basic linear regression.")
 
-# 🆕 NEW: Try to import Prophet for time series forecasting
+# NEW: Try to import Prophet for time series forecasting
 try:
     from prophet import Prophet
     import warnings

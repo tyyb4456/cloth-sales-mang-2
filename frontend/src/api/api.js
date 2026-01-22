@@ -1,16 +1,16 @@
 // frontend/src/api/api.js
 import axios from 'axios';
 
-const API_BASE_URL = 'https://clothsmart-production-dc97.up.railway.app';
+const API_BASE_URL = 'https://clothsmart-production-dc97.up.railway.app/';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true', // 🔧 Skip ngrok browser warning
-    'User-Agent': 'ClothShopApp/1.0', // 🔧 Custom user agent
+    'ngrok-skip-browser-warning': 'true',
+    'User-Agent': 'ClothShopApp/1.0', // 
   },
-  withCredentials: false, // 🔧 Disable credentials for ngrok
+  withCredentials: false, 
 });
 // REQUEST INTERCEPTOR - Add token to all requests
 api.interceptors.request.use(
