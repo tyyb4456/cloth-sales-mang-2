@@ -1,8 +1,8 @@
-// frontend/src/components/SaleForm.jsx - MOBILE RESPONSIVE
+// frontend/src/components/SaleForm.jsx - FIXED WITH AUTHENTICATION
 
 import { useState, useEffect, useRef } from 'react';
 import { X, AlertTriangle, CheckCircle } from 'lucide-react';
-import api from '../api/api';
+import api from '../api/api'; // ✅ USING AUTHENTICATED API
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -281,6 +281,7 @@ const SalesForm = ({
         payload.supplier_inventory_id = formData.selected_inventory_id;
       }
 
+      // ✅ FIXED: Using authenticated API
       const saleResponse = await api.post('/sales/', payload);
       const saleData = saleResponse.data;
 
@@ -294,6 +295,7 @@ const SalesForm = ({
           notes: formData.loan_notes || null
         };
 
+        // ✅ FIXED: Using authenticated API
         await api.post('/loans/', loanPayload);
       }
 
@@ -322,43 +324,38 @@ const SalesForm = ({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto">
-      {/* 📱 RESPONSIVE MODAL - Full screen on mobile, max-width on desktop */}
-      <div className="w-full min-h-screen sm:min-h-0 sm:max-w-2xl lg:max-w-4xl sm:my-8 bg-white dark:bg-gray-900 sm:rounded-xl border-0 sm:border border-gray-200 dark:border-gray-700">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 w-full max-w-3xl my-8">
         
-        {/* 📱 HEADER - Sticky on mobile */}
-        <div className="sticky top-0 z-10 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-900">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">New Sale</h3>
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">New Sale</h3>
           <button 
             onClick={resetForm} 
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-150 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-150"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* 📱 SUCCESS/ERROR MESSAGES */}
         {successMessage && (
-          <div className="mx-4 sm:mx-6 mt-3 sm:mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
-            <CheckCircle size={16} className="shrink-0" />
+          <div className="mx-6 mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
+            <CheckCircle size={16} />
             <span>{successMessage}</span>
           </div>
         )}
 
         {inlineError && (
-          <div className="mx-4 sm:mx-6 mt-3 sm:mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-sm text-red-800 dark:text-red-200">
-            <AlertTriangle size={16} className="shrink-0" />
+          <div className="mx-6 mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-sm text-red-800 dark:text-red-200">
+            <AlertTriangle size={16} />
             <span>{inlineError}</span>
           </div>
         )}
 
-        {/* 📱 FORM - Scrollable content */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(100vh-140px)] sm:max-h-[calc(80vh-140px)]">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           
-          {/* BASIC INFORMATION */}
           <div>
             <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Basic Information</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">
                   Salesperson *
@@ -426,32 +423,45 @@ const SalesForm = ({
 
           {selectedVariety && (
             <>
-              {/* SALE TYPE */}
               <div>
                 <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Sale Type</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 block">
                       Stock Type *
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['old_stock', 'new_stock'].map((type) => (
-                        <label key={type} className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
-                          formData.stock_type === type
-                            ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
-                        }`}>
-                          <input
-                            type="radio"
-                            name="stock_type"
-                            value={type}
-                            checked={formData.stock_type === type}
-                            onChange={(e) => handleStockTypeChange(e.target.value)}
-                            className="w-4 h-4"
-                          />
-                          <span>{type === 'old_stock' ? 'Old' : 'New'}</span>
-                        </label>
-                      ))}
+                    <div className="flex gap-2">
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
+                        formData.stock_type === 'old_stock'
+                          ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="stock_type"
+                          value="old_stock"
+                          checked={formData.stock_type === 'old_stock'}
+                          onChange={(e) => handleStockTypeChange(e.target.value)}
+                          className="w-4 h-4"
+                        />
+                        <span>Old</span>
+                      </label>
+
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
+                        formData.stock_type === 'new_stock'
+                          ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="stock_type"
+                          value="new_stock"
+                          checked={formData.stock_type === 'new_stock'}
+                          onChange={(e) => handleStockTypeChange(e.target.value)}
+                          className="w-4 h-4"
+                        />
+                        <span>New</span>
+                      </label>
                     </div>
                   </div>
 
@@ -459,34 +469,47 @@ const SalesForm = ({
                     <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 block">
                       Payment *
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['paid', 'loan'].map((status) => (
-                        <label key={status} className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
-                          formData.payment_status === status
-                            ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
-                        }`}>
-                          <input
-                            type="radio"
-                            name="payment_status"
-                            value={status}
-                            checked={formData.payment_status === status}
-                            onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
-                            className="w-4 h-4"
-                          />
-                          <span className="capitalize">{status}</span>
-                        </label>
-                      ))}
+                    <div className="flex gap-2">
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
+                        formData.payment_status === 'paid'
+                          ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="payment_status"
+                          value="paid"
+                          checked={formData.payment_status === 'paid'}
+                          onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
+                          className="w-4 h-4"
+                        />
+                        <span>Paid</span>
+                      </label>
+
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
+                        formData.payment_status === 'loan'
+                          ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="payment_status"
+                          value="loan"
+                          checked={formData.payment_status === 'loan'}
+                          onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
+                          className="w-4 h-4"
+                        />
+                        <span>Loan</span>
+                      </label>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* CUSTOMER INFORMATION - Conditional */}
               {formData.payment_status === 'loan' && (
                 <div>
                   <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Customer Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">
                         Name *
@@ -542,11 +565,10 @@ const SalesForm = ({
                 </div>
               )}
 
-              {/* PRICE SELECTOR - Conditional */}
               {showPriceSelector && availablePriceOptions.length > 1 && (
                 <div>
                   <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Select Price Option</h4>
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg max-h-48 overflow-y-auto">
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
                     {availablePriceOptions.map((option) => (
                       <button
                         key={option.id}
@@ -609,10 +631,9 @@ const SalesForm = ({
                 </div>
               )}
 
-              {/* SALE DETAILS */}
               <div>
                 <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Sale Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">
                       Quantity ({selectedVariety.measurement_unit}) *
@@ -699,19 +720,18 @@ const SalesForm = ({
                 </div>
               </div>
 
-              {/* PROFIT SUMMARY */}
               {formData.quantity && formData.cost_price && formData.selling_price && (
-                <div className="p-4 sm:p-5 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                <div className="p-5 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Total Profit</p>
-                      <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                      <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                         ₹{prices.totalProfit.toFixed(2)}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Per Unit</p>
-                      <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                      <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                         ₹{prices.profitPerUnit.toFixed(2)}
                       </p>
                     </div>
@@ -720,15 +740,12 @@ const SalesForm = ({
               )}
             </>
           )}
-        </form>
 
-        {/* 📱 STICKY FOOTER - Action Buttons */}
-        <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex gap-3 pt-2">
             <button
-              onClick={handleSubmit}
+              type="submit"
               disabled={!isFormValid() || isSubmitting}
-              className="w-full sm:flex-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-5 py-2.5 sm:py-3 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-5 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Recording...' : 'Record Sale'}
             </button>
@@ -736,12 +753,12 @@ const SalesForm = ({
               type="button"
               onClick={resetForm}
               disabled={isSubmitting}
-              className="w-full sm:w-auto border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-5 py-2.5 sm:py-3 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
