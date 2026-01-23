@@ -1,6 +1,8 @@
+// frontend/src/components/AIChatbot.jsx - MOBILE-FIRST RESPONSIVE VERSION
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, Loader2, X, Lightbulb, Sparkles, Bot, User } from 'lucide-react';
-import api from '../api/api'; // ✅ USING AUTHENTICATED API
+import api from '../api/api';
 
 // Component to format markdown-style text
 const FormattedMessage = ({ content, isUser }) => {
@@ -15,7 +17,7 @@ const FormattedMessage = ({ content, isUser }) => {
       if (line.match(/^#{1,3}\s+(.+)/)) {
         const level = line.match(/^(#{1,3})/)[0].length;
         const text = line.replace(/^#{1,3}\s+/, '');
-        const fontSize = level === 1 ? 'text-lg' : level === 2 ? 'text-base' : 'text-sm';
+        const fontSize = level === 1 ? 'text-base sm:text-lg' : level === 2 ? 'text-sm sm:text-base' : 'text-sm';
         elements.push(
           <div key={lineIndex} className={`font-bold ${fontSize} mt-2 mb-1 ${isUser ? 'text-white' : 'text-gray-900'}`}>
             {text}
@@ -28,7 +30,7 @@ const FormattedMessage = ({ content, isUser }) => {
       if (line.includes('**')) {
         const parts = line.split(/(\*\*.*?\*\*)/g);
         elements.push(
-          <div key={lineIndex} className="mb-1">
+          <div key={lineIndex} className="mb-1 text-sm sm:text-base">
             {parts.map((part, i) => {
               if (part.startsWith('**') && part.endsWith('**')) {
                 return <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>;
@@ -44,7 +46,7 @@ const FormattedMessage = ({ content, isUser }) => {
       if (line.match(/^[\-\*]\s+(.+)/)) {
         const text = line.replace(/^[\-\*]\s+/, '');
         elements.push(
-          <div key={lineIndex} className="flex gap-2 mb-1 ml-2">
+          <div key={lineIndex} className="flex gap-2 mb-1 ml-2 text-sm sm:text-base">
             <span className={isUser ? 'text-white/80' : 'text-gray-600'}>•</span>
             <span>{text}</span>
           </div>
@@ -56,7 +58,7 @@ const FormattedMessage = ({ content, isUser }) => {
       if (line.match(/^\d+\.\s+(.+)/)) {
         const match = line.match(/^(\d+)\.\s+(.+)/);
         elements.push(
-          <div key={lineIndex} className="flex gap-2 mb-1 ml-2">
+          <div key={lineIndex} className="flex gap-2 mb-1 ml-2 text-sm sm:text-base">
             <span className={`font-medium ${isUser ? 'text-white/80' : 'text-gray-600'}`}>{match[1]}.</span>
             <span>{match[2]}</span>
           </div>
@@ -72,7 +74,7 @@ const FormattedMessage = ({ content, isUser }) => {
 
       // Regular text
       elements.push(
-        <div key={lineIndex} className="mb-1">
+        <div key={lineIndex} className="mb-1 text-sm sm:text-base">
           {line}
         </div>
       );
@@ -110,7 +112,6 @@ const AIChatbot = () => {
 
   const loadInitialData = async () => {
     try {
-      // ✅ FIXED: Using authenticated API
       let statsRes = null;
       let questionsRes = null;
 
@@ -172,7 +173,6 @@ const AIChatbot = () => {
     setIsLoading(true);
 
     try {
-      // ✅ FIXED: Using authenticated API
       const response = await api.post('/chatbot/chat', {
         message: textToSend,
         conversation_history: messages
@@ -214,65 +214,71 @@ const AIChatbot = () => {
 
   return (
     <>
-      {/* Floating Chat Button */}
+      {/* MOBILE-FIRST FLOATING CHAT BUTTON */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-16 h-16
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-14 h-14 sm:w-16 sm:h-16
           bg-linear-to-br from-slate-600 to-slate-700
           text-white rounded-full shadow-xl
-          hover:shadow-slate-500/30 transition-all duration-300 hover:scale-110 z-50 flex items-center justify-center group"
+          hover:shadow-slate-500/30 transition-all duration-300 hover:scale-110 z-50 flex items-center justify-center group active:scale-95"
+          aria-label="Open AI Chat"
         >
-          <MessageCircle size={28} className="group-hover:scale-110 transition-transform" />
+          <MessageCircle size={28} className="sm:w-7 sm:h-7 group-hover:scale-110 transition-transform" />
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></span>
         </button>
       )}
 
-      {/* Chat Window */}
+      {/* MOBILE-FIRST CHAT WINDOW */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-96 h-150 bg-white rounded-2xl shadow-2xl 
-                        flex flex-col z-50 border border-gray-200 overflow-hidden">
-          {/* Header */}
-          <div className="bg-linear-to-r from-slate-700 to-slate-800 text-white p-4 flex items-center justify-between">
+        <div className="fixed inset-0 sm:inset-auto sm:bottom-4 sm:right-4 lg:bottom-6 lg:right-6 
+                        sm:w-96 lg:w-105 sm:h-150 lg:h-162.5 
+                        bg-white sm:rounded-2xl shadow-2xl 
+                        flex flex-col z-50 border-0 sm:border sm:border-gray-200">
+          
+          {/* HEADER */}
+          <div className="bg-linear-to-r from-slate-700 to-slate-800 text-white p-4 sm:p-5 flex items-center justify-between sm:rounded-t-2xl">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                <Bot size={22} />
+              <div className="w-10 h-10 sm:w-11 sm:h-11 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <Bot size={22} className="sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">AI Business Assistant</h3>
+                <h3 className="font-semibold text-base sm:text-lg">AI Business Assistant</h3>
                 <p className="text-xs text-white/80 flex items-center gap-1">
                   <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
                   Online
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={clearChat}
-                className="p-2 hover:bg-white/20 rounded-lg transition"
+                className="p-2 hover:bg-white/20 rounded-lg transition active:scale-95"
                 title="Clear chat"
+                aria-label="Clear chat"
               >
                 <Sparkles size={18} />
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/20 rounded-lg transition"
+                className="p-2 hover:bg-white/20 rounded-lg transition active:scale-95"
+                aria-label="Close chat"
               >
                 <X size={20} />
               </button>
             </div>
           </div>
 
-          {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          {/* MESSAGES CONTAINER */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50">
             {messages.map((message, index) => (
               <div
                 key={index}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
               >
-                <div className={`flex gap-2 max-w-[85%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={`flex gap-2 max-w-[85%] sm:max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                   {/* Avatar */}
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${message.role === 'user'
+                  <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 ${message.role === 'user'
                     ? 'bg-linear-to-br from-slate-500 to-slate-600'
                     : 'bg-linear-to-br from-gray-700 to-gray-900'
                     }`}>
@@ -280,16 +286,16 @@ const AIChatbot = () => {
                   </div>
 
                   {/* Message Bubble */}
-                  <div className={`rounded-2xl px-4 py-2.5 ${message.role === 'user'
+                  <div className={`rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 ${message.role === 'user'
                     ? 'bg-linear-to-br from-slate-600 to-slate-700 text-white'
                     : message.isError
                       ? 'bg-red-50 text-red-800 border border-red-200'
                       : 'bg-white text-gray-800 shadow-sm border border-gray-200'
                     }`}>
-                    <div className="text-sm leading-relaxed">
+                    <div className="text-sm leading-relaxed wrap-break-word">
                       <FormattedMessage content={message.content} isUser={message.role === 'user'} />
                     </div>
-                    <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-white/70' : 'text-gray-400'
+                    <p className={`text-xs mt-1.5 ${message.role === 'user' ? 'text-white/70' : 'text-gray-400'
                       }`}>
                       {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
@@ -302,7 +308,7 @@ const AIChatbot = () => {
             {isLoading && (
               <div className="flex justify-start animate-fadeIn">
                 <div className="flex gap-2">
-                  <div className="w-8 h-8 rounded-full bg-linear-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-linear-to-br from-gray-700 to-gray-900 flex items-center justify-center">
                     <Bot size={16} className="text-white" />
                   </div>
                   <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200">
@@ -330,7 +336,7 @@ const AIChatbot = () => {
                       onClick={() => handleQuickQuery(question)}
                       className="px-3 py-1.5 bg-white hover:bg-purple-50 border border-gray-200 
                                hover:border-slate-300 rounded-full text-xs text-gray-700 
-                               hover:text-slate-700 transition-all duration-200 hover:shadow-sm"
+                               hover:text-slate-700 transition-all duration-200 hover:shadow-sm active:scale-95"
                     >
                       {question}
                     </button>
@@ -342,27 +348,27 @@ const AIChatbot = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Stats Bar */}
+          {/* QUICK STATS BAR */}
           {quickStats && quickStats.today && (
-            <div className="border-t border-gray-200 bg-white p-3">
+            <div className="border-t border-gray-200 bg-white p-2.5 sm:p-3">
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
                   <p className="text-xs text-gray-600 font-medium">Revenue</p>
-                  <p className="text-sm font-bold text-slate-700">
+                  <p className="text-xs sm:text-sm font-bold text-slate-700">
                     ₹{quickStats.today.revenue.toLocaleString()}
                   </p>
                 </div>
 
                 <div className="bg-teal-50 rounded-lg p-2 border border-teal-200">
                   <p className="text-xs text-gray-600 font-medium">Profit</p>
-                  <p className="text-sm font-bold text-teal-700">
+                  <p className="text-xs sm:text-sm font-bold text-teal-700">
                     ₹{quickStats.today.profit.toLocaleString()}
                   </p>
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
                   <p className="text-xs text-gray-600 font-medium">Orders</p>
-                  <p className="text-sm font-bold text-gray-700">
+                  <p className="text-xs sm:text-sm font-bold text-gray-700">
                     {quickStats.today.transactions}
                   </p>
                 </div>
@@ -370,8 +376,8 @@ const AIChatbot = () => {
             </div>
           )}
 
-          {/* Input Area */}
-          <div className="border-t border-gray-200 bg-white p-4">
+          {/* INPUT AREA */}
+          <div className="border-t border-gray-200 bg-white p-3 sm:p-4 sm:rounded-b-2xl">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -380,18 +386,19 @@ const AIChatbot = () => {
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Ask me anything about your business..."
                 disabled={isLoading}
-                className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl 
+                className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 border border-gray-200 rounded-xl 
                          focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
-                         disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                         disabled:opacity-50 disabled:cursor-not-allowed text-sm placeholder:text-sm"
               />
               <button
                 onClick={() => handleSendMessage()}
                 disabled={!inputMessage.trim() || isLoading}
-                className="p-3 bg-linear-to-br from-slate-600 to-slate-700 text-white rounded-xl
+                className="p-2.5 sm:p-3 bg-linear-to-br from-slate-600 to-slate-700 text-white rounded-xl
                          hover:from-slate-700 hover:to-slate-800 transition-all duration-200
                          disabled:opacity-50 disabled:cursor-not-allowed
                          disabled:hover:from-slate-600 disabled:hover:to-slate-700
                          hover:shadow-md hover:scale-105 active:scale-95"
+                aria-label="Send message"
               >
                 {isLoading ? (
                   <Loader2 size={20} className="animate-spin" />

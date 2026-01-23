@@ -1,7 +1,9 @@
+// frontend/src/components/PredictionsDashboard.jsx - MOBILE-FIRST RESPONSIVE VERSION
+
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { TrendingUp, TrendingDown, AlertCircle, Zap, Package, ShoppingCart, Lightbulb, Calendar, Target, Award } from 'lucide-react';
-import api from '../api/api'; // ✅ USING AUTHENTICATED API
+import api from '../api/api';
 
 const PredictionsDashboard = () => {
   const [forecastData, setForecastData] = useState(null);
@@ -21,7 +23,6 @@ const PredictionsDashboard = () => {
     setError(null);
     
     try {
-      // ✅ FIXED: Using authenticated API
       const [forecastRes, trendsRes, insightsRes, reorderRes] = await Promise.all([
         api.get(`/predictions/revenue-forecast?days_ahead=${forecastDays}`),
         api.get('/predictions/sales-trends?days=30'),
@@ -29,7 +30,6 @@ const PredictionsDashboard = () => {
         api.get('/predictions/reorder-recommendations')
       ]);
 
-      // ✅ FIXED: Access data from response.data
       setForecastData(forecastRes.data);
       setTrends(trendsRes.data);
       setInsights(insightsRes.data);
@@ -46,8 +46,8 @@ const PredictionsDashboard = () => {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading AI predictions...</p>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-sm sm:text-base text-gray-600">Loading AI predictions...</p>
         </div>
       </div>
     );
@@ -55,14 +55,14 @@ const PredictionsDashboard = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="bg-white rounded-xl shadow-sm p-8 border border-red-200 max-w-md">
-          <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2 text-center">Unable to Generate Predictions</h2>
-          <p className="text-gray-600 text-center mb-4">{error}</p>
+      <div className="flex items-center justify-center h-screen bg-gray-50 p-4">
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 border border-red-200 max-w-md w-full">
+          <AlertCircle className="w-10 h-10 sm:w-12 sm:h-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 text-center">Unable to Generate Predictions</h2>
+          <p className="text-sm sm:text-base text-gray-600 text-center mb-4">{error}</p>
           <button
             onClick={loadPredictions}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition"
           >
             Retry
           </button>
@@ -78,25 +78,24 @@ const PredictionsDashboard = () => {
       low: 'bg-red-100 text-red-800 border-red-300'
     };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${colors[confidence] || colors.low}`}>
+      <span className={`px-2 sm:px-2.5 py-1 rounded-full text-xs font-semibold border ${colors[confidence] || colors.low}`}>
         {confidence?.toUpperCase()} CONFIDENCE
       </span>
     );
   };
 
   const getTrendIcon = (trend) => {
-    if (trend === 'upward') return <TrendingUp className="w-5 h-5 text-green-600" />;
-    if (trend === 'downward') return <TrendingDown className="w-5 h-5 text-red-600" />;
-    return <div className="w-5 h-5 bg-gray-400 rounded-full" />;
+    if (trend === 'upward') return <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />;
+    if (trend === 'downward') return <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />;
+    return <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gray-400 rounded-full" />;
   };
 
   const getInsightIcon = (type) => {
-    if (type === 'positive') return <Award className="w-6 h-6 text-green-600" />;
-    if (type === 'warning') return <AlertCircle className="w-6 h-6 text-yellow-600" />;
-    return <Lightbulb className="w-6 h-6 text-blue-600" />;
+    if (type === 'positive') return <Award className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />;
+    if (type === 'warning') return <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />;
+    return <Lightbulb className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />;
   };
 
-  // Combine historical and forecast data for visualization
   const combinedChartData = [
     ...((forecastData?.historical_data || []).map(d => ({ ...d, type: 'historical' }))),
     ...((forecastData?.forecast || []).map(d => ({ 
@@ -107,30 +106,31 @@ const PredictionsDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 p-6">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Zap className="w-8 h-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900">AI Predictions & Insights</h1>
+        
+        {/* MOBILE-FIRST HEADER */}
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <Zap className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-blue-600" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">AI Predictions & Insights</h1>
           </div>
-          <p className="text-gray-600">Machine learning powered forecasts and smart recommendations</p>
+          <p className="text-sm sm:text-base text-gray-600">Machine learning powered forecasts and smart recommendations</p>
         </div>
 
-        {/* Forecast Controls */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-200">
-          <div className="flex items-center justify-between">
+        {/* MOBILE-FIRST FORECAST CONTROLS */}
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 mb-4 sm:mb-6 border border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-gray-600" />
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 shrink-0" />
               <span className="text-sm font-medium text-gray-700">Forecast Period:</span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {[7, 14, 30, 60, 90].map((days) => (
                 <button
                   key={days}
                   onClick={() => setForecastDays(days)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 ${
                     forecastDays === days
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -143,20 +143,19 @@ const PredictionsDashboard = () => {
           </div>
         </div>
 
-        {/* Revenue Forecast Chart */}
+        {/* MOBILE-FIRST REVENUE FORECAST CHART */}
         {forecastData && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">Revenue Forecast</h2>
-                  <p className="text-sm text-gray-600">
-                    Predicted total: ₹{Math.round(forecastData.summary?.total_predicted_revenue || 0).toLocaleString()}
-                  </p>
-                </div>
-                {getConfidenceBadge(forecastData.confidence)}
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex-1">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">Revenue Forecast</h2>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  Predicted total: ₹{Math.round(forecastData.summary?.total_predicted_revenue || 0).toLocaleString()}
+                </p>
               </div>
+              {getConfidenceBadge(forecastData.confidence)}
             </div>
+            
             <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={combinedChartData}>
                 <defs>
@@ -199,74 +198,76 @@ const PredictionsDashboard = () => {
                 />
               </AreaChart>
             </ResponsiveContainer>
-            <div className="mt-4 grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+            
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-4 border-t border-gray-200">
               <div>
-                <p className="text-sm text-gray-600">Model Accuracy (R²)</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-xs sm:text-sm text-gray-600">Model Accuracy (R²)</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {((forecastData.r_squared || 0) * 100).toFixed(1)}%
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Avg Daily Predicted</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-xs sm:text-sm text-gray-600">Avg Daily Predicted</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   ₹{Math.round(forecastData.summary?.avg_daily_predicted || 0).toLocaleString()}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Forecast Period</p>
-                <p className="text-2xl font-bold text-gray-900">{forecastDays} Days</p>
+                <p className="text-xs sm:text-sm text-gray-600">Forecast Period</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{forecastDays} Days</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Trends & Insights Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* MOBILE-FIRST TRENDS & INSIGHTS GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+          
           {/* Sales Trends */}
           {trends && (
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Sales Trends Analysis</h2>
+            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Sales Trends Analysis</h2>
               
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                     {getTrendIcon(trends.revenue_trend?.trend)}
-                    <div>
-                      <p className="font-medium text-gray-900">Revenue Trend</p>
-                      <p className="text-sm text-gray-600 capitalize">{trends.revenue_trend?.trend || 'unknown'}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 text-sm sm:text-base">Revenue Trend</p>
+                      <p className="text-xs sm:text-sm text-gray-600 capitalize truncate">{trends.revenue_trend?.trend || 'unknown'}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">{trends.revenue_trend?.strength || 0}%</p>
+                  <div className="text-right shrink-0 ml-2">
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{trends.revenue_trend?.strength || 0}%</p>
                     <p className="text-xs text-gray-600">Strength</p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                     {getTrendIcon(trends.profit_trend?.trend)}
-                    <div>
-                      <p className="font-medium text-gray-900">Profit Trend</p>
-                      <p className="text-sm text-gray-600 capitalize">{trends.profit_trend?.trend || 'unknown'}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 text-sm sm:text-base">Profit Trend</p>
+                      <p className="text-xs sm:text-sm text-gray-600 capitalize truncate">{trends.profit_trend?.trend || 'unknown'}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">{trends.profit_trend?.strength || 0}%</p>
+                  <div className="text-right shrink-0 ml-2">
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{trends.profit_trend?.strength || 0}%</p>
                     <p className="text-xs text-gray-600">Strength</p>
                   </div>
                 </div>
 
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm font-medium text-blue-900 mb-1">Growth Rate</p>
-                  <p className="text-3xl font-bold text-blue-600">
+                <div className="p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs sm:text-sm font-medium text-blue-900 mb-1">Growth Rate</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-blue-600">
                     {(trends.growth_rate || 0) > 0 ? '+' : ''}{(trends.growth_rate || 0).toFixed(1)}%
                   </p>
                 </div>
 
                 {trends.seasonality?.has_seasonality && (
-                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                    <p className="text-sm font-medium text-purple-900 mb-2">Seasonal Pattern Detected</p>
-                    <div className="flex justify-between text-sm">
+                  <div className="p-3 sm:p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <p className="text-xs sm:text-sm font-medium text-purple-900 mb-2">Seasonal Pattern Detected</p>
+                    <div className="flex justify-between text-xs sm:text-sm">
                       <div>
                         <p className="text-purple-700">Best Day:</p>
                         <p className="font-bold text-purple-900">{trends.seasonality.best_day}</p>
@@ -284,15 +285,15 @@ const PredictionsDashboard = () => {
 
           {/* Smart Insights */}
           {insights && (
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Smart Insights</h2>
+            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Smart Insights</h2>
               
               <div className="space-y-3">
                 {insights.insights?.length > 0 ? (
                   insights.insights.map((insight, idx) => (
                     <div
                       key={idx}
-                      className={`p-4 rounded-lg border-l-4 ${
+                      className={`p-3 sm:p-4 rounded-lg border-l-4 ${
                         insight.type === 'positive'
                           ? 'bg-green-50 border-green-500'
                           : insight.type === 'warning'
@@ -300,11 +301,13 @@ const PredictionsDashboard = () => {
                           : 'bg-blue-50 border-blue-500'
                       }`}
                     >
-                      <div className="flex gap-3">
-                        {getInsightIcon(insight.type)}
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">{insight.title}</h3>
-                          <p className="text-sm text-gray-700">{insight.message}</p>
+                      <div className="flex gap-2 sm:gap-3">
+                        <div className="shrink-0">
+                          {getInsightIcon(insight.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 mb-1 text-sm sm:text-base wrap-break-word">{insight.title}</h3>
+                          <p className="text-xs sm:text-sm text-gray-700 wrap-break-word">{insight.message}</p>
                           <span className={`inline-block mt-2 px-2 py-1 rounded text-xs font-medium ${
                             insight.priority === 'high'
                               ? 'bg-red-100 text-red-800'
@@ -319,9 +322,9 @@ const PredictionsDashboard = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Lightbulb className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                    <p>No insights available yet. More data needed.</p>
+                  <div className="text-center py-6 sm:py-8 text-gray-500">
+                    <Lightbulb className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-400" />
+                    <p className="text-xs sm:text-sm">No insights available yet. More data needed.</p>
                   </div>
                 )}
               </div>
@@ -329,19 +332,63 @@ const PredictionsDashboard = () => {
           )}
         </div>
 
-        {/* Reorder Recommendations */}
+        {/* MOBILE-FIRST REORDER RECOMMENDATIONS */}
         {reorderRecs && reorderRecs.recommendations?.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-200 bg-linear-to-r from-blue-50 to-purple-50">
-              <div className="flex items-center gap-3">
-                <Target className="w-6 h-6 text-blue-600" />
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-gray-200 bg-linear-to-r from-blue-50 to-purple-50">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Target className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 shrink-0" />
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Smart Reorder Recommendations</h2>
-                  <p className="text-sm text-gray-600">AI-calculated optimal inventory levels</p>
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Smart Reorder Recommendations</h2>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-0.5">AI-calculated optimal inventory levels</p>
                 </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            
+            {/* MOBILE: CARD LAYOUT */}
+            <div className="block lg:hidden divide-y divide-gray-200">
+              {reorderRecs.recommendations.slice(0, 10).map((rec, idx) => (
+                <div key={idx} className="p-4">
+                  <div className="flex items-start gap-2 mb-3">
+                    <Package className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-900 text-sm sm:text-base wrap-break-word">{rec.variety_name}</span>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs font-semibold shrink-0 ${
+                      rec.priority === 'high'
+                        ? 'bg-red-100 text-red-800'
+                        : rec.priority === 'medium'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {rec.priority.toUpperCase()}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-gray-50 rounded p-2">
+                      <p className="text-gray-500 mb-0.5">Avg Daily Sales</p>
+                      <p className="font-semibold text-gray-900">{rec.avg_daily_sales.toFixed(1)} units</p>
+                    </div>
+                    <div className="bg-yellow-50 rounded p-2">
+                      <p className="text-gray-500 mb-0.5">Reorder Point</p>
+                      <p className="font-semibold text-yellow-800">{rec.reorder_point} units</p>
+                    </div>
+                    <div className="bg-blue-50 rounded p-2">
+                      <p className="text-gray-500 mb-0.5">Order Quantity</p>
+                      <p className="font-bold text-blue-800">{rec.optimal_order_quantity} units</p>
+                    </div>
+                    <div className="bg-gray-50 rounded p-2">
+                      <p className="text-gray-500 mb-0.5">Days of Stock</p>
+                      <p className="font-semibold text-gray-900">{rec.days_of_stock} days</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* DESKTOP: TABLE LAYOUT */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
@@ -355,7 +402,7 @@ const PredictionsDashboard = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {reorderRecs.recommendations.slice(0, 10).map((rec, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 transition">
+                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition`}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <Package className="w-4 h-4 text-gray-400" />

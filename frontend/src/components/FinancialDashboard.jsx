@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, AlertCircle, Calendar, ArrowUp, ArrowDown, Activity } from 'lucide-react';
-import api from '../api/api'; 
+// frontend/src/components/FinancialDashboard.jsx - MOBILE-FIRST RESPONSIVE VERSION
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import React, { useState, useEffect } from 'react';
+import { 
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
+  Legend, ResponsiveContainer 
+} from 'recharts';
+import { 
+  TrendingUp, TrendingDown, DollarSign, AlertCircle, 
+  Calendar, ArrowUp, ArrowDown, Activity, RefreshCw 
+} from 'lucide-react';
+import api from '../api/api';
 
 const FinancialDashboard = () => {
   const [loading, setLoading] = useState(false);
@@ -31,13 +38,11 @@ const FinancialDashboard = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // Get data for last 6 months
       const months = [];
       for (let i = 5; i >= 0; i--) {
         months.push(getMonthsBack(i));
       }
 
-      // Fetch financial reports for each month
       const monthlyReports = await Promise.all(
         months.map(async (m) => {
           try {
@@ -58,14 +63,12 @@ const FinancialDashboard = () => {
         })
       );
 
-      // Get expense breakdown for current month
       const currentMonth = new Date();
-      const expensesResponse = await fetch(
+      const expensesResponse = await api.get(
         `/expenses/month/${currentMonth.getFullYear()}/${currentMonth.getMonth() + 1}`
       );
       const expenses = expensesResponse.data;
 
-      // Calculate expense breakdown by category
       const categoryMap = (expenses || []).reduce((acc, expense) => {
         const category = expense.category.replace(/_/g, ' ').toUpperCase();
         acc[category] = (acc[category] || 0) + parseFloat(expense.amount);
@@ -77,7 +80,6 @@ const FinancialDashboard = () => {
         value: parseFloat(value.toFixed(2))
       }));
 
-      // Prepare monthly trends data
       const monthlyTrends = monthlyReports.map(report => ({
         month: report.label,
         revenue: parseFloat(report.total_revenue || 0),
@@ -86,7 +88,6 @@ const FinancialDashboard = () => {
         netIncome: parseFloat(report.net_income || 0)
       }));
 
-      // Calculate KPIs
       const currentMonthData = monthlyReports[monthlyReports.length - 1];
       const lastMonthData = monthlyReports[monthlyReports.length - 2] || currentMonthData;
 
@@ -141,43 +142,36 @@ const FinancialDashboard = () => {
   };
 
   const COLORS = [
-    '#5f6388', // balanced indigo
-    '#8b7fb5', // medium lavender
-    '#5f9a8d', // teal
-    '#c2a46b', // warm sand
-    '#b56f6f', // muted red
-    '#5f8fa3', // blue-teal
-    '#8fa06a'  // olive green
+    '#5f6388', '#8b7fb5', '#5f9a8d', '#c2a46b', 
+    '#b56f6f', '#5f8fa3', '#8fa06a'
   ];
 
-
-
-
   const KPICard = ({ title, value, growth, icon: Icon, color, prefix = '₹' }) => (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+    <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
       <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1 truncate">{title}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
             {prefix}{value.toLocaleString()}
           </p>
           {growth !== undefined && (
             <div className="flex items-center gap-1 mt-2">
               {growth > 0 ? (
-                <ArrowUp className="w-4 h-4 text-green-600" />
+                <ArrowUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 shrink-0" />
               ) : growth < 0 ? (
-                <ArrowDown className="w-4 h-4 text-gray-600" />
+                <ArrowDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 shrink-0" />
               ) : null}
-              <span className={`text-sm font-medium ${growth > 0 ? 'text-green-200' : growth < 0 ? 'text-gray-600' : 'text-gray-600'
-                }`}>
+              <span className={`text-xs sm:text-sm font-medium ${
+                growth > 0 ? 'text-green-600' : growth < 0 ? 'text-gray-600' : 'text-gray-600'
+              }`}>
                 {Math.abs(growth).toFixed(1)}%
               </span>
-              <span className="text-xs text-gray-500">vs last month</span>
+              <span className="text-xs text-gray-500 truncate">vs last month</span>
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
+        <div className={`p-2 sm:p-3 rounded-lg ${color} shrink-0`}>
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
       </div>
     </div>
@@ -185,32 +179,33 @@ const FinancialDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-gray-800 mx-auto mb-4"></div>
+          <p className="text-sm sm:text-base text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Financial Dashboard</h1>
-            <p className="text-gray-600 mt-1">Comprehensive business analytics and insights</p>
+        
+        {/* MOBILE-FIRST HEADER */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Financial Dashboard</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Comprehensive business analytics and insights</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Last 6 Months</span>
+          <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2 w-full sm:w-auto">
+            <Calendar size={18} className="text-gray-500 shrink-0" />
+            <span className="text-xs sm:text-sm font-medium text-gray-700">Last 6 Months</span>
           </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* MOBILE-FIRST KPI CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8">
           <KPICard
             title="Total Revenue"
             value={dashboardData.kpis.revenue?.value || 0}
@@ -241,9 +236,9 @@ const FinancialDashboard = () => {
           />
         </div>
 
-        {/* Revenue vs Expenses Trend */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Revenue vs Expenses Trend</h2>
+        {/* MOBILE-FIRST REVENUE VS EXPENSES TREND */}
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8 border border-gray-200">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Revenue vs Expenses Trend</h2>
           <ResponsiveContainer width="100%" height={350}>
             <AreaChart data={dashboardData.monthlyTrends}>
               <defs>
@@ -257,7 +252,11 @@ const FinancialDashboard = () => {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '12px' }} />
+              <XAxis 
+                dataKey="month" 
+                stroke="#6b7280" 
+                style={{ fontSize: '12px' }}
+              />
               <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
               <Tooltip
                 contentStyle={{
@@ -289,15 +288,20 @@ const FinancialDashboard = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Profit Analysis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* MOBILE-FIRST PROFIT ANALYSIS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-4 sm:mb-6 md:mb-8">
+          
           {/* Profit Trend Line Chart */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Profit Trend</h2>
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Profit Trend</h2>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={dashboardData.profitTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '12px' }} />
+                <XAxis 
+                  dataKey="month" 
+                  stroke="#6b7280" 
+                  style={{ fontSize: '12px' }}
+                />
                 <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
                 <Tooltip
                   contentStyle={{
@@ -331,8 +335,8 @@ const FinancialDashboard = () => {
           </div>
 
           {/* Expense Breakdown Pie Chart */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Expense Distribution</h2>
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Expense Distribution</h2>
             {dashboardData.expenseBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -355,19 +359,26 @@ const FinancialDashboard = () => {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-75 text-gray-500">
-                No expense data available
+                <div className="text-center">
+                  <AlertCircle size={40} className="mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No expense data available</p>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Monthly Comparison Bar Chart */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Monthly Financial Comparison</h2>
+        {/* MOBILE-FIRST MONTHLY COMPARISON BAR CHART */}
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200 mb-4 sm:mb-6 md:mb-8">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Monthly Financial Comparison</h2>
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={dashboardData.monthlyTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '12px' }} />
+              <XAxis 
+                dataKey="month" 
+                stroke="#6b7280" 
+                style={{ fontSize: '12px' }}
+              />
               <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
               <Tooltip
                 contentStyle={{
@@ -378,22 +389,48 @@ const FinancialDashboard = () => {
                 }}
                 formatter={(value) => `₹${value.toLocaleString()}`}
               />
-              {/* <Legend /> */}
+              <Legend />
               <Bar dataKey="revenue" fill="#5f8fa3" name="Revenue" radius={[8, 8, 0, 0]} />
               <Bar dataKey="expenses" fill="#b56f6f" name="Expenses" radius={[8, 8, 0, 0]} />
               <Bar dataKey="netIncome" fill="#5f9a8d" name="Net Income" radius={[8, 8, 0, 0]} />
-
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Expense Details Table */}
+        {/* MOBILE-FIRST EXPENSE DETAILS TABLE */}
         {dashboardData.expenseBreakdown.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Expense Category Details</h2>
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-gray-200">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Expense Category Details</h2>
             </div>
-            <div className="overflow-x-auto">
+            
+            {/* MOBILE: CARD LAYOUT */}
+            <div className="block lg:hidden divide-y divide-gray-200">
+              {dashboardData.expenseBreakdown
+                .sort((a, b) => b.value - a.value)
+                .map((item, idx) => {
+                  const total = dashboardData.expenseBreakdown.reduce((sum, i) => sum + i.value, 0);
+                  const percentage = (item.value / total) * 100;
+                  return (
+                    <div key={idx} className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div
+                          className="w-4 h-4 rounded-full shrink-0"
+                          style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                        />
+                        <span className="font-medium text-gray-900 text-sm sm:text-base">{item.name}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm sm:text-base">
+                        <span className="font-semibold text-gray-900">₹{item.value.toLocaleString()}</span>
+                        <span className="text-gray-600">{percentage.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* DESKTOP: TABLE LAYOUT */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
