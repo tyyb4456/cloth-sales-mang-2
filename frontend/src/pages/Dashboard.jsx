@@ -1,9 +1,13 @@
-// frontend/src/pages/Dashboard.jsx - MOBILE RESPONSIVE
+// frontend/src/pages/Dashboard.jsx - WITH MODERN SKELETON LOADING UI
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { TrendingUp, Package, ShoppingCart, DollarSign } from 'lucide-react';
-import { Card, CardBody, CardHeader, Input, Spinner } from '@heroui/react';
+import { TrendingUp, Package, ShoppingCart } from 'lucide-react';
 import api from '../api/api';
+
+// Helper to format date
+const formatDate = (date) => {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 // Helper function to get item count
 const getItemCount = (quantity, unit) => {
@@ -11,11 +15,56 @@ const getItemCount = (quantity, unit) => {
   return parseFloat(quantity);
 };
 
-// 📱 RESPONSIVE StatCard Component
+// SKELETON SHIMMER COMPONENT
+const SkeletonShimmer = ({ className = "" }) => (
+  <div className={`relative overflow-hidden bg-gray-200 dark:bg-gray-700 rounded ${className}`}>
+    <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700" />
+  </div>
+);
+
+// Skeleton StatCard Component
+function SkeletonStatCard() {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+      <div className="p-4 sm:p-5 lg:p-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <SkeletonShimmer className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl shrink-0" />
+          <div className="flex-1 min-w-0 space-y-2">
+            <SkeletonShimmer className="h-3 sm:h-4 w-24 sm:w-28" />
+            <SkeletonShimmer className="h-6 sm:h-8 lg:h-10 w-32 sm:w-36 lg:w-40" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Skeleton Summary Card
+function SkeletonSummaryCard() {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+      <div className="pb-0 px-4 sm:px-6 pt-5 sm:pt-6">
+        <SkeletonShimmer className="h-5 sm:h-6 w-40 sm:w-48" />
+      </div>
+      <div className="pt-3 sm:pt-4 px-4 sm:px-6 pb-5 sm:pb-6 space-y-3 sm:space-y-4">
+        <div className="flex justify-between items-center py-1.5 sm:py-2">
+          <SkeletonShimmer className="h-4 sm:h-5 w-24 sm:w-28" />
+          <SkeletonShimmer className="h-5 sm:h-6 w-16 sm:w-20" />
+        </div>
+        <div className="flex justify-between items-center py-1.5 sm:py-2">
+          <SkeletonShimmer className="h-4 sm:h-5 w-28 sm:w-32" />
+          <SkeletonShimmer className="h-5 sm:h-6 w-20 sm:w-24" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// StatCard Component (Real Data)
 function StatCard({ title, value, icon: Icon, color }) {
   return (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardBody className="p-4 sm:p-5 lg:p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+      <div className="p-4 sm:p-5 lg:p-6">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className={`p-3 sm:p-3.5 lg:p-4 rounded-xl ${color} shrink-0`}>
             <Icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" />
@@ -29,13 +78,13 @@ function StatCard({ title, value, icon: Icon, color }) {
             </p>
           </div>
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 export default function Dashboard() {
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(formatDate(new Date()));
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -83,21 +132,12 @@ export default function Dashboard() {
       setReport(reportData);
     } catch (error) {
       console.error('Error loading report:', error);
-      setError(error.response?.data?.detail || error.message || 'Failed to load data');
+      setError(error.message || 'Failed to load data');
       setReport(null);
     } finally {
       setLoading(false);
     }
   };
-
-  // 📱 LOADING STATE
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64 px-4">
-        <Spinner size="lg" color="default" />
-      </div>
-    );
-  }
 
   // 📱 ERROR STATE
   if (error) {
@@ -106,7 +146,7 @@ export default function Dashboard() {
         <p className="text-sm sm:text-base text-red-600 dark:text-red-400">Error: {error}</p>
         <button 
           onClick={loadReport}
-          className="mt-4 px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 text-sm sm:text-base"
+          className="mt-4 px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 text-sm sm:text-base transition"
         >
           Retry
         </button>
@@ -116,10 +156,10 @@ export default function Dashboard() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-      {/* 📱 HEADER - Stacks on mobile */}
+      {/* HEADER - Stacks on mobile */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-500">
             Dashboard
           </h2>
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -127,97 +167,125 @@ export default function Dashboard() {
           </p>
         </div>
         
-        {/* 📱 DATE INPUT - Full width on mobile */}
+        {/* DATE INPUT - Full width on mobile */}
         <div className="w-full sm:w-auto">
-          <Input
+          <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full sm:w-auto sm:min-w-50"
-            variant="bordered"
-            color="default"
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-100 text-sm sm:text-base"
           />
         </div>
       </div>
 
-      {report && report.sales_summary && (
+      {/* LOADING SKELETONS */}
+      {loading ? (
         <>
-          {/* 📱 SALES SUMMARY - Responsive Grid */}
+          {/* Sales Summary Skeletons */}
           <div className="mb-4 sm:mb-6">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3 sm:mb-4">
-              Sales Summary
-            </h3>
-            {/* 1 col mobile, 2 col tablet, 3 col desktop */}
+            <SkeletonShimmer className="h-6 sm:h-7 w-32 sm:w-40 mb-3 sm:mb-4" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-              <StatCard
-                title="Total Sales"
-                value={`Rs ${parseFloat(report.sales_summary.total_sales_amount).toFixed(2)}`}
-                icon={ShoppingCart}
-                color="bg-gray-600 dark:bg-gray-500"
-              />
-              <StatCard
-                title="Total Profit"
-                value={`Rs ${parseFloat(report.sales_summary.total_profit).toFixed(2)}`}
-                icon={TrendingUp}
-                color="bg-gray-600 dark:bg-gray-500"
-              />
-              <StatCard
-                title="Items Sold"
-                value={report.sales_summary.total_quantity_sold}
-                icon={Package}
-                color="bg-gray-600 dark:bg-gray-500"
-              />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
             </div>
           </div>
 
-          {/* 📱 SUMMARY CARDS - Stack on mobile */}
+          {/* Summary Cards Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-0 px-4 sm:px-6">
-                <h4 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">
-                  Sales Transactions
-                </h4>
-              </CardHeader>
-              <CardBody className="pt-3 sm:pt-4 px-4 sm:px-6">
-                <div className="space-y-2 sm:space-y-3">
-                  <div className="flex justify-between items-center py-1.5 sm:py-2">
-                    <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">
-                      Total Sales:
-                    </span>
-                    <span className="text-base sm:text-lg font-bold text-gray-600 dark:text-gray-300">
-                      {report.sales_summary.sales_count}
-                    </span>
+            <SkeletonSummaryCard />
+          </div>
+        </>
+      ) : (
+        <>
+          {report && report.sales_summary && (
+            <>
+              {/* SALES SUMMARY - Responsive Grid */}
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3 sm:mb-4">
+                  Sales Summary
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                  <StatCard
+                    title="Total Sales"
+                    value={`Rs ${parseFloat(report.sales_summary.total_sales_amount).toFixed(2)}`}
+                    icon={ShoppingCart}
+                    color="bg-gray-600 dark:bg-gray-500"
+                  />
+                  <StatCard
+                    title="Total Profit"
+                    value={`Rs ${parseFloat(report.sales_summary.total_profit).toFixed(2)}`}
+                    icon={TrendingUp}
+                    color="bg-gray-600 dark:bg-gray-500"
+                  />
+                  <StatCard
+                    title="Items Sold"
+                    value={report.sales_summary.total_quantity_sold}
+                    icon={Package}
+                    color="bg-gray-600 dark:bg-gray-500"
+                  />
+                </div>
+              </div>
+
+              {/* SUMMARY CARDS - Stack on mobile */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+                  <div className="pb-0 px-4 sm:px-6 pt-5 sm:pt-6">
+                    <h4 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">
+                      Sales Transactions
+                    </h4>
                   </div>
-                  <div className="flex justify-between items-center py-1.5 sm:py-2">
-                    <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">
-                      Avg Sale Value:
-                    </span>
-                    <span className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">
-                      Rs {report.sales_summary.sales_count > 0
-                        ? (parseFloat(report.sales_summary.total_sales_amount) / report.sales_summary.sales_count).toFixed(2)
-                        : '0.00'}
-                    </span>
+                  <div className="pt-3 sm:pt-4 px-4 sm:px-6 pb-5 sm:pb-6">
+                    <div className="space-y-2 sm:space-y-3">
+                      <div className="flex justify-between items-center py-1.5 sm:py-2">
+                        <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">
+                          Total Sales:
+                        </span>
+                        <span className="text-base sm:text-lg font-bold text-gray-600 dark:text-gray-300">
+                          {report.sales_summary.sales_count}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 sm:py-2">
+                        <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">
+                          Avg Sale Value:
+                        </span>
+                        <span className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">
+                          Rs {report.sales_summary.sales_count > 0
+                            ? (parseFloat(report.sales_summary.total_sales_amount) / report.sales_summary.sales_count).toFixed(2)
+                            : '0.00'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </CardBody>
-            </Card>
-          </div>
+              </div>
+            </>
+          )}
+
+          {/* NO DATA STATE */}
+          {!report && !loading && !error && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center py-8 sm:py-12">
+              <div className="p-6">
+                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-1 sm:mb-2">
+                  No data available for this date
+                </p>
+                <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500">
+                  Try selecting a different date or add some transactions
+                </p>
+              </div>
+            </div>
+          )}
         </>
       )}
 
-      {/* 📱 NO DATA STATE */}
-      {!report && !loading && !error && (
-        <Card className="text-center py-8 sm:py-12">
-          <CardBody>
-            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-1 sm:mb-2">
-              No data available for this date
-            </p>
-            <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500">
-              Try selecting a different date or add some transactions
-            </p>
-          </CardBody>
-        </Card>
-      )}
+      {/* ADD SHIMMER ANIMATION */}
+      <style>{`
+        @keyframes shimmer {
+          100% {
+            transform: translateX(100%);
+          }
+        }
+      `}</style>
     </div>
   );
 }
