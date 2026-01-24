@@ -1,8 +1,8 @@
 // frontend/src/api/api.js
 import axios from 'axios';
 
-// const API_BASE_URL = 'https://clothsmart-production-dc97.up.railway.app/';
-const API_BASE_URL = 'http://127.0.0.1:8001';
+const API_BASE_URL = 'https://clothsmart-production-dc97.up.railway.app/';
+// const API_BASE_URL = 'http://127.0.0.1:8001';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
