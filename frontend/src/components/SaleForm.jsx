@@ -1,33 +1,35 @@
-// frontend/src/components/SaleForm.jsx - FIXED WITH AUTHENTICATION
+// frontend/src/components/SaleForm.jsx - UPDATED WITH AUTO-CREATION FEATURE
 
 import { useState, useEffect, useRef } from 'react';
-import { X, AlertTriangle, CheckCircle } from 'lucide-react';
-import api from '../api/api'; // ✅ USING AUTHENTICATED API
+import { X, AlertTriangle, CheckCircle, Plus } from 'lucide-react';
+import api from '../api/api';
+import { useAuth } from '../App';
 
 const formatDate = (date) => {
   const d = new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const SalesForm = ({ 
-  show, 
-  onClose, 
-  onSubmit, 
-  varieties = [], 
+const SalesForm = ({
+  show,
+  onClose,
+  onSubmit,
+  varieties = [],
   supplierInventories = []
 }) => {
+  const { user } = useAuth(); // Get logged-in user
+
   const savedSalesperson = typeof window !== 'undefined' ? localStorage.getItem('lastSalesperson') || '' : '';
-  const savedStockType = typeof window !== 'undefined' ? localStorage.getItem('lastStockType') || 'old_stock' : 'old_stock';
   const savedPaymentStatus = typeof window !== 'undefined' ? localStorage.getItem('lastPaymentStatus') || 'paid' : 'paid';
 
   const [formData, setFormData] = useState({
-    salesperson_name: savedSalesperson,
+    salesperson_name: user?.full_name || savedSalesperson, // Use logged-in user's name
     variety_id: '',
+    variety_name: '',
     quantity: '',
     selling_price: '',
     cost_price: '',
     sale_date: formatDate(new Date()),
-    stock_type: savedStockType,
     selected_inventory_id: null,
     payment_status: savedPaymentStatus,
     customer_name: '',
@@ -39,6 +41,7 @@ const SalesForm = ({
   const [varietySearch, setVarietySearch] = useState('');
   const [showVarietyDropdown, setShowVarietyDropdown] = useState(false);
   const [selectedVariety, setSelectedVariety] = useState(null);
+  const [isNewVariety, setIsNewVariety] = useState(false);  // NEW: Track if creating new variety
   const [availablePriceOptions, setAvailablePriceOptions] = useState([]);
   const [showPriceSelector, setShowPriceSelector] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -56,9 +59,6 @@ const SalesForm = ({
     }
   }, [formData.salesperson_name]);
 
-  useEffect(() => {
-    localStorage.setItem('lastStockType', formData.stock_type);
-  }, [formData.stock_type]);
 
   useEffect(() => {
     localStorage.setItem('lastPaymentStatus', formData.payment_status);
@@ -74,14 +74,15 @@ const SalesForm = ({
   const resetForm = () => {
     setVarietySearch('');
     setSelectedVariety(null);
+    setIsNewVariety(false);
     setFormData({
       salesperson_name: savedSalesperson,
       variety_id: '',
+      variety_name: '',
       quantity: '',
       selling_price: '',
       cost_price: '',
       sale_date: formatDate(new Date()),
-      stock_type: savedStockType,
       payment_status: savedPaymentStatus,
       selected_inventory_id: null,
       customer_name: '',
@@ -97,9 +98,11 @@ const SalesForm = ({
   };
 
   const handleVarietySelect = (variety) => {
+    setIsNewVariety(false);
     setFormData({
       ...formData,
       variety_id: variety.id,
+      variety_name: variety.name,
       cost_price: '',
       selected_inventory_id: null
     });
@@ -123,16 +126,44 @@ const SalesForm = ({
 
     setAvailablePriceOptions(priceOptions);
 
-    if (priceOptions.length === 1 && formData.stock_type === 'new_stock') {
+    if (priceOptions.length === 1) {
       handlePriceOptionSelect(priceOptions[0]);
-    } else if (priceOptions.length > 1 && formData.stock_type === 'new_stock') {
+    } else if (priceOptions.length > 1) {
       setShowPriceSelector(true);
     }
 
-    if (formData.stock_type === 'old_stock' && variety.default_cost_price && formData.quantity) {
+    if (variety.default_cost_price && formData.quantity) {
       const cost = parseFloat(variety.default_cost_price) * parseFloat(formData.quantity);
       setFormData(prev => ({ ...prev, cost_price: cost.toString() }));
     }
+
+    setTimeout(() => quantityRef.current?.focus(), 100);
+  };
+
+  // NEW: Handle creating new variety
+  const handleCreateNewVariety = () => {
+    const trimmedName = varietySearch.trim();
+
+    if (!trimmedName) {
+      setInlineError('Please enter a variety name');
+      return;
+    }
+
+    setIsNewVariety(true);
+    setSelectedVariety({
+      id: null,
+      name: trimmedName,
+      measurement_unit: 'pieces'  // Default
+    });
+    setFormData({
+      ...formData,
+      variety_id: null,
+      variety_name: trimmedName,
+      cost_price: '',
+      selected_inventory_id: null
+    });
+    setShowVarietyDropdown(false);
+    setAvailablePriceOptions([]);
 
     setTimeout(() => quantityRef.current?.focus(), 100);
   };
@@ -153,39 +184,16 @@ const SalesForm = ({
     setFormData({ ...formData, quantity });
     setInlineError('');
 
-    if (formData.stock_type === 'new_stock' && formData.selected_inventory_id) {
+    if (formData.selected_inventory_id) {
       const selectedOption = availablePriceOptions.find(opt => opt.id === formData.selected_inventory_id);
       if (selectedOption && quantity) {
         const totalCost = selectedOption.price * parseFloat(quantity);
         setFormData(prev => ({ ...prev, quantity, cost_price: totalCost.toString() }));
       }
-    } else if (formData.stock_type === 'old_stock' && selectedVariety?.default_cost_price && quantity) {
+    } else if (selectedVariety?.default_cost_price && quantity) {
       const totalCost = parseFloat(selectedVariety.default_cost_price) * parseFloat(quantity);
       setFormData(prev => ({ ...prev, quantity, cost_price: totalCost.toString() }));
     }
-  };
-
-  const handleStockTypeChange = (stockType) => {
-    setFormData({
-      ...formData,
-      stock_type: stockType,
-      cost_price: '',
-      selected_inventory_id: null
-    });
-
-    if (stockType === 'new_stock' && availablePriceOptions.length > 1) {
-      setShowPriceSelector(true);
-    } else if (stockType === 'new_stock' && availablePriceOptions.length === 1) {
-      handlePriceOptionSelect(availablePriceOptions[0]);
-    } else if (stockType === 'old_stock' && selectedVariety?.default_cost_price && formData.quantity) {
-      const cost = parseFloat(selectedVariety.default_cost_price) * parseFloat(formData.quantity);
-      setFormData(prev => ({ ...prev, cost_price: cost.toString() }));
-    }
-  };
-
-  const getCurrentStock = () => {
-    if (!selectedVariety) return 0;
-    return availablePriceOptions.reduce((sum, opt) => sum + opt.quantity_remaining, 0);
   };
 
   const calculatePrices = () => {
@@ -208,7 +216,7 @@ const SalesForm = ({
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightedIndex((prev) => 
+      setHighlightedIndex((prev) =>
         prev < filteredVarieties.length - 1 ? prev + 1 : prev
       );
     } else if (e.key === 'ArrowUp') {
@@ -225,20 +233,18 @@ const SalesForm = ({
   };
 
   const isFormValid = () => {
-    if (!formData.salesperson_name || !formData.variety_id || !formData.quantity || 
-        !formData.cost_price || !formData.selling_price) {
+    // Must have variety (existing or new name)
+    if (!formData.variety_id && !formData.variety_name) {
+      return false;
+    }
+
+    if (!formData.salesperson_name || !formData.quantity ||
+      !formData.cost_price || !formData.selling_price) {
       return false;
     }
 
     if (formData.payment_status === 'loan' && !formData.customer_name.trim()) {
       return false;
-    }
-
-    if (formData.stock_type === 'new_stock') {
-      const currentStock = getCurrentStock();
-      if (currentStock < parseFloat(formData.quantity)) {
-        return false;
-      }
     }
 
     return true;
@@ -255,33 +261,32 @@ const SalesForm = ({
       return;
     }
 
-    if (formData.stock_type === 'new_stock') {
-      const currentStock = getCurrentStock();
-      if (currentStock < parseFloat(formData.quantity)) {
-        setInlineError(`Insufficient stock. Only ${currentStock} available.`);
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
     try {
       const payload = {
         salesperson_name: formData.salesperson_name,
-        variety_id: parseInt(formData.variety_id),
         quantity: parseFloat(formData.quantity),
         selling_price: parseFloat(formData.selling_price),
         cost_price: parseFloat(formData.cost_price),
         sale_date: formData.sale_date,
-        stock_type: formData.stock_type,
         payment_status: formData.payment_status,
-        customer_name: formData.payment_status === 'loan' ? formData.customer_name : null
       };
 
-      if (formData.stock_type === 'new_stock' && formData.selected_inventory_id) {
+      if (formData.variety_id) {
+        payload.variety_id = parseInt(formData.variety_id);
+      } else if (formData.variety_name) {
+        payload.variety_name = formData.variety_name;
+      }
+
+      if (formData.payment_status === 'loan') {
+        payload.customer_name = formData.customer_name;
+      }
+
+      if (formData.selected_inventory_id) {
         payload.supplier_inventory_id = formData.selected_inventory_id;
       }
 
-      // ✅ FIXED: Using authenticated API
+      console.log('📤 Sending payload:', payload);
+
       const saleResponse = await api.post('/sales/', payload);
       const saleData = saleResponse.data;
 
@@ -295,18 +300,28 @@ const SalesForm = ({
           notes: formData.loan_notes || null
         };
 
-        // ✅ FIXED: Using authenticated API
         await api.post('/loans/', loanPayload);
       }
 
-      setSuccessMessage('Sale recorded successfully');
+      setSuccessMessage(isNewVariety
+        ? `Sale recorded! New variety "${formData.variety_name}" created automatically.`
+        : 'Sale recorded successfully'
+      );
+
       setTimeout(() => {
         resetForm();
         onSubmit();
-      }, 1000);
+      }, 2000);
     } catch (error) {
-      console.error('Failed to record sale:', error);
-      setInlineError(error.response?.data?.detail || 'Failed to record sale');
+      console.error('❌ Failed to record sale:', error);
+      console.error('Error response:', error.response?.data);
+
+      const errorMessage = error.response?.data?.detail
+        || (Array.isArray(error.response?.data)
+          ? error.response.data.map(e => e.msg).join(', ')
+          : 'Failed to record sale');
+
+      setInlineError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -317,20 +332,18 @@ const SalesForm = ({
   );
 
   const prices = calculatePrices();
-  const currentStock = getCurrentStock();
   const selectedPriceOption = availablePriceOptions.find(opt => opt.id === formData.selected_inventory_id);
-  const maxQuantity = formData.stock_type === 'new_stock' ? currentStock : undefined;
 
   if (!show) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 w-full max-w-3xl my-8">
-        
+
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">New Sale</h3>
-          <button 
-            onClick={resetForm} 
+          <button
+            onClick={resetForm}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-150"
           >
             <X size={20} />
@@ -352,7 +365,7 @@ const SalesForm = ({
         )}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          
+
           <div>
             <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Basic Information</h4>
             <div className="grid grid-cols-2 gap-4">
@@ -360,18 +373,39 @@ const SalesForm = ({
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">
                   Salesperson *
                 </label>
-                <select
-                  required
-                  value={formData.salesperson_name}
-                  onChange={(e) => setFormData({ ...formData, salesperson_name: e.target.value })}
-                  className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-600 transition-colors duration-150"
-                >
-                  <option value="">Select</option>
-                  <option value="shahzad">Shahzad</option>
-                  <option value="zulifqar">Zulifqar</option>
-                  <option value="kashif">Kashif</option>
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={user?.full_name || 'User'}
+                    disabled
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-not-allowed"
+                  />
+                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      (You)
+                    </span>
+                  </div>
+                </div>
               </div>
+
+{/* allow users to change the salesperson (for recording sales on behalf of others): */}
+
+{/* <div>
+  <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+    Salesperson *
+  </label>
+  <input
+    type="text"
+    required
+    value={formData.salesperson_name}
+    onChange={(e) => setFormData({ ...formData, salesperson_name: e.target.value })}
+    placeholder="Enter salesperson name"
+    className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-600 transition-colors duration-150"
+  />
+  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+    Default: {user?.full_name}
+  </p>
+</div> */}
 
               <div className="relative">
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">
@@ -386,35 +420,69 @@ const SalesForm = ({
                     setVarietySearch(e.target.value);
                     setShowVarietyDropdown(true);
                     setHighlightedIndex(0);
+                    setIsNewVariety(false);
                   }}
                   onFocus={() => setShowVarietyDropdown(true)}
                   onKeyDown={handleVarietyKeyDown}
-                  placeholder="Search variety..."
+                  placeholder="Type to search or create new..."
                   className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-600 transition-colors duration-150"
                 />
 
-                {showVarietyDropdown && filteredVarieties.length > 0 && (
-                  <div className="absolute z-30 mt-1 w-full max-h-48 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
-                    {filteredVarieties.map((v, idx) => (
+                {showVarietyDropdown && (
+                  <div className="absolute z-30 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+                    {filteredVarieties.length > 0 ? (
+                      <>
+                        {filteredVarieties.map((v, idx) => (
+                          <div
+                            key={v.id}
+                            onClick={() => handleVarietySelect(v)}
+                            className={`px-3 py-2.5 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0 transition-colors duration-150 ${idx === highlightedIndex
+                              ? 'bg-gray-100 dark:bg-gray-800'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                              }`}
+                          >
+                            <div className="flex justify-between items-center">
+                              <div className="text-sm text-gray-900 dark:text-gray-100">{v.name}</div>
+                              {v.current_stock > 0 && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {parseFloat(v.current_stock).toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+
+                        {varietySearch.trim() && (
+                          <div
+                            onClick={handleCreateNewVariety}
+                            className="px-3 py-2.5 cursor-pointer bg-blue-50 dark:bg-blue-900/20 border-t-2 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-150"
+                          >
+                            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                              <Plus size={16} />
+                              <span className="text-sm font-medium">Create "{varietySearch.trim()}"</span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
                       <div
-                        key={v.id}
-                        onClick={() => handleVarietySelect(v)}
-                        className={`px-3 py-2.5 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0 transition-colors duration-150 ${
-                          idx === highlightedIndex
-                            ? 'bg-gray-100 dark:bg-gray-800'
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
+                        onClick={handleCreateNewVariety}
+                        className="px-3 py-2.5 cursor-pointer bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-150"
                       >
-                        <div className="flex justify-between items-center">
-                          <div className="text-sm text-gray-900 dark:text-gray-100">{v.name}</div>
-                          {v.current_stock > 0 && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {parseFloat(v.current_stock).toFixed(1)}
-                            </span>
-                          )}
+                        <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                          <Plus size={16} />
+                          <span className="text-sm font-medium">Create new variety "{varietySearch.trim()}"</span>
                         </div>
                       </div>
-                    ))}
+                    )}
+                  </div>
+                )}
+
+                {/* Show indicator for new variety */}
+                {isNewVariety && (
+                  <div className="mt-1 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                    <Plus size={12} />
+                    <span>Creating new variety</span>
                   </div>
                 )}
               </div>
@@ -424,85 +492,37 @@ const SalesForm = ({
           {selectedVariety && (
             <>
               <div>
-                <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Sale Type</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 block">
-                      Stock Type *
-                    </label>
-                    <div className="flex gap-2">
-                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
-                        formData.stock_type === 'old_stock'
-                          ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="stock_type"
-                          value="old_stock"
-                          checked={formData.stock_type === 'old_stock'}
-                          onChange={(e) => handleStockTypeChange(e.target.value)}
-                          className="w-4 h-4"
-                        />
-                        <span>Old</span>
-                      </label>
+                <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Payment</h4>
+                <div className="flex gap-2">
+                  <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${formData.payment_status === 'paid'
+                      ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                    }`}>
+                    <input
+                      type="radio"
+                      name="payment_status"
+                      value="paid"
+                      checked={formData.payment_status === 'paid'}
+                      onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
+                      className="w-4 h-4"
+                    />
+                    <span>Paid</span>
+                  </label>
 
-                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
-                        formData.stock_type === 'new_stock'
-                          ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="stock_type"
-                          value="new_stock"
-                          checked={formData.stock_type === 'new_stock'}
-                          onChange={(e) => handleStockTypeChange(e.target.value)}
-                          className="w-4 h-4"
-                        />
-                        <span>New</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 block">
-                      Payment *
-                    </label>
-                    <div className="flex gap-2">
-                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
-                        formData.payment_status === 'paid'
-                          ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="payment_status"
-                          value="paid"
-                          checked={formData.payment_status === 'paid'}
-                          onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
-                          className="w-4 h-4"
-                        />
-                        <span>Paid</span>
-                      </label>
-
-                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${
-                        formData.payment_status === 'loan'
-                          ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="payment_status"
-                          value="loan"
-                          checked={formData.payment_status === 'loan'}
-                          onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
-                          className="w-4 h-4"
-                        />
-                        <span>Loan</span>
-                      </label>
-                    </div>
-                  </div>
+                  <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors duration-150 ${formData.payment_status === 'loan'
+                      ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                    }`}>
+                    <input
+                      type="radio"
+                      name="payment_status"
+                      value="loan"
+                      checked={formData.payment_status === 'loan'}
+                      onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
+                      className="w-4 h-4"
+                    />
+                    <span>Loan</span>
+                  </label>
                 </div>
               </div>
 
@@ -564,7 +584,6 @@ const SalesForm = ({
                   </div>
                 </div>
               )}
-
               {showPriceSelector && availablePriceOptions.length > 1 && (
                 <div>
                   <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Select Price Option</h4>
@@ -574,11 +593,10 @@ const SalesForm = ({
                         key={option.id}
                         type="button"
                         onClick={() => handlePriceOptionSelect(option)}
-                        className={`w-full px-4 py-3 text-left text-sm transition-colors duration-150 ${
-                          formData.selected_inventory_id === option.id
-                            ? 'bg-gray-100 dark:bg-gray-800'
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
+                        className={`w-full px-4 py-3 text-left text-sm transition-colors duration-150 ${formData.selected_inventory_id === option.id
+                          ? 'bg-gray-100 dark:bg-gray-800'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                          }`}
                       >
                         <div className="flex justify-between items-center">
                           <div>
@@ -599,7 +617,7 @@ const SalesForm = ({
                 </div>
               )}
 
-              {selectedPriceOption && !showPriceSelector && formData.stock_type === 'new_stock' && (
+              {selectedPriceOption && !showPriceSelector && (
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div className="text-sm text-gray-700 dark:text-gray-300">
                     <span className="font-medium">₹{selectedPriceOption.price.toFixed(2)}</span>
@@ -617,20 +635,6 @@ const SalesForm = ({
                 </div>
               )}
 
-              {formData.stock_type === 'new_stock' && (
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Available: <span className="font-medium">{currentStock.toFixed(1)}</span> {selectedVariety.measurement_unit}
-                  </span>
-                  {formData.quantity && parseFloat(formData.quantity) > currentStock && (
-                    <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
-                      <AlertTriangle size={14} />
-                      <span>Insufficient stock</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
               <div>
                 <h4 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Sale Details</h4>
                 <div className="grid grid-cols-2 gap-4">
@@ -643,7 +647,6 @@ const SalesForm = ({
                       required
                       type="number"
                       min="0.01"
-                      max={maxQuantity}
                       step="any"
                       value={formData.quantity}
                       onChange={(e) => handleQuantityChange(e.target.value)}
@@ -655,11 +658,6 @@ const SalesForm = ({
                       className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-600 transition-colors duration-150"
                       placeholder="0"
                     />
-                    {maxQuantity && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Max: {maxQuantity.toFixed(1)}
-                      </p>
-                    )}
                   </div>
 
                   <div>
@@ -733,6 +731,41 @@ const SalesForm = ({
                       <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Per Unit</p>
                       <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                         ₹{prices.profitPerUnit.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show info about auto-creation */}
+              {isNewVariety && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Plus className="text-blue-600 dark:text-blue-400 mt-0.5" size={18} />
+                    <div>
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                        Creating New Variety
+                      </p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        "{formData.variety_name}" will be created automatically with default settings.
+                        You can update details in the Varieties page later.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!isNewVariety && availablePriceOptions.length === 0 && (
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="text-yellow-600 dark:text-yellow-400 mt-0.5" size={18} />
+                    <div>
+                      <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-1">
+                        No Inventory Found
+                      </p>
+                      <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                        This variety has no inventory records. A new inventory entry will be created automatically.
+                        You can update supplier details in the Inventory page later.
                       </p>
                     </div>
                   </div>

@@ -36,7 +36,7 @@ const InventoryMovementChart = ({ data, isDark }) => (
 
     <ResponsiveContainer width="100%" height={280}>
       <AreaChart data={data}>
-        
+
         <CartesianGrid
           vertical={false}
           stroke={isDark ? '#1F2937' : '#E5E7EB'}
@@ -157,22 +157,22 @@ const StockUtilizationChart = ({ data, isDark }) => {
             </Pie>
 
             {/* Apple-style tooltip */}
-<Tooltip
-  formatter={(value, name) => [`${value.toFixed(1)} units`, name]}
-  contentStyle={{
-    backgroundColor: isDark ? '#020617' : '#FFFFFF',
-    border: `1px solid ${isDark ? '#1F2937' : '#E5E7EB'}`,
-    borderRadius: 10,
-    fontSize: 12,
-  }}
-  labelStyle={{
-    color: isDark ? '#E5E7EB' : '#111827',
-  }}
-  itemStyle={{
-    color: isDark ? '#E5E7EB' : '#111827',
-  }}
-  cursor={false}
-/>
+            <Tooltip
+              formatter={(value, name) => [`${value.toFixed(1)} units`, name]}
+              contentStyle={{
+                backgroundColor: isDark ? '#020617' : '#FFFFFF',
+                border: `1px solid ${isDark ? '#1F2937' : '#E5E7EB'}`,
+                borderRadius: 10,
+                fontSize: 12,
+              }}
+              labelStyle={{
+                color: isDark ? '#E5E7EB' : '#111827',
+              }}
+              itemStyle={{
+                color: isDark ? '#E5E7EB' : '#111827',
+              }}
+              cursor={false}
+            />
 
           </PieChart>
         </ResponsiveContainer>
@@ -585,7 +585,7 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e) => setIsDark(e.matches);
-    
+
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
@@ -598,7 +598,7 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
     setLoading(true);
     try {
       const { startDate, endDate } = getDateRange(timeRange);
-      
+
       const [inventoryRes, returnsRes, salesRes, varietiesRes] = await Promise.all([
         api.get('/supplier/inventory'),
         api.get('/supplier/returns'),
@@ -639,15 +639,15 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
       // Calculate trends (compare with previous period)
       const prevPeriodStart = new Date(startDate);
       prevPeriodStart.setDate(prevPeriodStart.getDate() - timeRange);
-      
+
       const prevInventory = allInventory.filter(i => {
         const date = new Date(i.supply_date);
         return date >= prevPeriodStart && date < startDate;
       });
 
       const prevTotalSupplied = prevInventory.reduce((sum, i) => sum + parseFloat(i.quantity), 0);
-      const suppliedTrend = prevTotalSupplied > 0 
-        ? ((totalSupplied - prevTotalSupplied) / prevTotalSupplied) * 100 
+      const suppliedTrend = prevTotalSupplied > 0
+        ? ((totalSupplied - prevTotalSupplied) / prevTotalSupplied) * 100
         : 0;
 
       // Prepare chart data
@@ -689,7 +689,7 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
   // Helper functions for data preparation
   const prepareMovementData = (inventory, returns, sales, startDate, endDate) => {
     const dataMap = {};
-    
+
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dateKey = d.toISOString().split('T')[0];
       dataMap[dateKey] = {
@@ -708,11 +708,10 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
     });
 
     sales.forEach(s => {
-      if (s.stock_type === 'new_stock') {
-        const dateKey = s.sale_date;
-        if (dataMap[dateKey]) {
-          dataMap[dateKey].used += parseFloat(s.quantity);
-        }
+      // Now all sales count as "used" since we removed stock_type
+      const dateKey = s.sale_date;
+      if (dataMap[dateKey]) {
+        dataMap[dateKey].used += parseFloat(s.quantity);
       }
     });
 
@@ -737,7 +736,7 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
 
   const prepareSupplierData = (inventory, returns) => {
     const supplierMap = {};
-    
+
     inventory.forEach(i => {
       if (!supplierMap[i.supplier_name]) {
         supplierMap[i.supplier_name] = { name: i.supplier_name, supplied: 0, returned: 0 };
@@ -756,7 +755,7 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
 
   const prepareVarietyTurnover = (varieties, inventory, sales) => {
     const varietyMap = {};
-    
+
     varieties.forEach(v => {
       varietyMap[v.id] = {
         name: v.name,
@@ -773,7 +772,8 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
     });
 
     sales.forEach(s => {
-      if (s.stock_type === 'new_stock' && varietyMap[s.variety_id]) {
+      // Now all sales count as sold since we removed stock_type
+      if (varietyMap[s.variety_id]) {
         varietyMap[s.variety_id].sold += parseFloat(s.quantity);
       }
     });
@@ -790,7 +790,7 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
 
   const prepareDailyFlow = (inventory, sales, startDate, endDate) => {
     const dataMap = {};
-    
+
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dateKey = d.toISOString().split('T')[0];
       dataMap[dateKey] = {
@@ -813,7 +813,8 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
       });
 
       sales.forEach(s => {
-        if (s.sale_date <= dateKey && s.stock_type === 'new_stock') {
+        // Now all sales count as used since we removed stock_type
+        if (s.sale_date <= dateKey) {
           cumulativeUsed += parseFloat(s.quantity);
         }
       });
@@ -828,7 +829,7 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
 
   const prepareHealthData = (supplied, used, returned, remaining) => {
     const total = supplied || 1;
-    
+
     return [
       { metric: 'Availability', score: (remaining / total) * 100 },
       { metric: 'Utilization', score: (used / total) * 100 },
@@ -860,15 +861,14 @@ const InventoryAnalyticsDashboard = ({ timeRange, onTimeRangeChange }) => {
             <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>Inventory Analytics</h2>
             <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>Comprehensive stock movement and utilization insights</p>
           </div>
-          
+
           {/* Theme Toggle Button */}
           <button
             onClick={() => setIsDark(!isDark)}
-            className={`p-3 rounded-lg transition-colors ${
-              isDark 
-                ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' 
-                : 'bg-white hover:bg-gray-100 text-gray-700'
-            }`}
+            className={`p-3 rounded-lg transition-colors ${isDark
+              ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400'
+              : 'bg-white hover:bg-gray-100 text-gray-700'
+              }`}
             title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {isDark ? <Sun size={20} /> : <Moon size={20} />}

@@ -65,8 +65,8 @@ function SkeletonMobileCard() {
         </div>
       </div>
 
+      {/* Only payment badge now (removed stock type badge) */}
       <div className="flex flex-wrap gap-2">
-        <SkeletonShimmer className="h-6 w-20 rounded-full" />
         <SkeletonShimmer className="h-6 w-16 rounded-full" />
       </div>
     </div>
@@ -84,9 +84,7 @@ function SkeletonTableRow() {
         <SkeletonShimmer className="h-5 w-32 sm:w-36" />
         <SkeletonShimmer className="h-3 w-20 mt-1" />
       </td>
-      <td className="px-6 py-4 text-center">
-        <SkeletonShimmer className="h-6 w-16 rounded-full mx-auto" />
-      </td>
+
       <td className="px-6 py-4 text-center">
         <SkeletonShimmer className="h-6 w-16 rounded-full mx-auto" />
       </td>
@@ -298,14 +296,13 @@ export default function EnhancedSalesWithPriceSelector() {
                 ))}
               </div>
 
-              {/* 🖥️ DESKTOP: Table Skeletons */}
+              {/* DESKTOP: Table Skeletons */}
               <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Salesperson</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Variety</th>
-                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Type</th>
                       <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Payment</th>
                       <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Qty</th>
                       <th className="px-6 py-4 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Sale</th>
@@ -332,7 +329,7 @@ export default function EnhancedSalesWithPriceSelector() {
             </div>
           ) : (
             <>
-              {/* 📱 MOBILE: Card View */}
+              {/* MOBILE: Card View */}
               <div className="block lg:hidden divide-y divide-gray-200 dark:divide-gray-700">
                 {sales.map((item) => (
                   <div key={item.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
@@ -389,13 +386,6 @@ export default function EnhancedSalesWithPriceSelector() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        item.stock_type === 'new_stock'
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      }`}>
-                        {item.stock_type === 'new_stock' ? '✓ New Stock' : 'Old Stock'}
-                      </span>
                       
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         item.payment_status === 'paid'
@@ -415,14 +405,14 @@ export default function EnhancedSalesWithPriceSelector() {
                 ))}
               </div>
 
-              {/* 🖥️ DESKTOP: Table View */}
+              {/* DESKTOP: Table View */}
               <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Salesperson</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Variety</th>
-                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Type</th>
+
                       <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Payment</th>
                       <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Qty</th>
                       <th className="px-6 py-4 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Sale</th>
@@ -443,14 +433,6 @@ export default function EnhancedSalesWithPriceSelector() {
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-800 dark:text-gray-100">{item.variety.name}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 capitalize mt-1">{item.variety.measurement_unit}</div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${item.stock_type === 'new_stock'
-                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                            }`}>
-                            {item.stock_type === 'new_stock' ? '✓ New' : 'Old'}
-                          </span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${item.payment_status === 'paid'

@@ -1,12 +1,40 @@
 // frontend/src/components/LandingAuthPage.jsx - FIXED VERSION
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../App';
 import api from '../api/api'; // ✅ USE AUTHENTICATED API
 import {
   Store, TrendingUp, Users, BarChart3,
-  Lock, Mail, Building2, Phone, Check
+  Lock, Mail, Building2, Phone, Check, Moon, Sun
 } from 'lucide-react';
+
+// Theme Hook
+const useTheme = () => {
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme');
+      if (saved) return saved;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  return { theme, toggleTheme };
+};
 
 export default function LandingAuthPage() {
   const { login } = useAuth();
@@ -16,6 +44,7 @@ export default function LandingAuthPage() {
   const [authMode, setAuthMode] = useState('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(''); // ✅ ADD ERROR STATE
+  const { theme, toggleTheme } = useTheme();
 
   const [loginData, setLoginData] = useState({
     email: '',
@@ -135,35 +164,38 @@ export default function LandingAuthPage() {
 
   if (!showAuth) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col transition-colors">
 
-        <nav className="border-b border-gray-200 bg-white">
+        <nav className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
           <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <Store className="w-6 h-6 text-gray-900" />
-              <span className="text-xl font-semibold text-gray-900">ShopSmart</span>
+              <Store className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+              <span className="text-xl font-semibold text-gray-900 dark:text-gray-100">ShopSmart</span>
             </div>
-            <button
-              onClick={() => setShowAuth(true)}
-              className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition"
-            >
-              Sign In
-            </button>
+            <div className="flex items-center gap-3">
+  
+              <button
+                onClick={() => setShowAuth(true)}
+                className="px-5 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition"
+              >
+                Sign In
+              </button>
+            </div>
           </div>
         </nav>
 
         <div className="flex-1">
           <div className="max-w-6xl mx-auto px-6 py-24">
             <div className="max-w-3xl">
-              <div className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full mb-6">
+              <div className="inline-block px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-full mb-6">
                 7-day free trial
               </div>
 
-              <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
+              <h1 className="text-5xl font-bold text-gray-900 dark:text-gray-100 mb-6 leading-tight">
                 Inventory and sales management for cloth shops
               </h1>
 
-              <p className="text-xl text-gray-600 mb-10 leading-relaxed">
+              <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 leading-relaxed">
                 Track sales, manage inventory, and analyze performance with enterprise-grade tools built for retail.
               </p>
 
@@ -172,43 +204,43 @@ export default function LandingAuthPage() {
                   setShowAuth(true);
                   setAuthMode('register');
                 }}
-                className="px-6 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition"
+                className="px-6 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition"
               >
                 Get Started
               </button>
             </div>
           </div>
 
-          <div className="border-t border-gray-200 bg-gray-50">
+          <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
             <div className="max-w-6xl mx-auto px-6 py-20">
               <div className="grid md:grid-cols-3 gap-12">
 
                 <div>
-                  <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
-                    <TrendingUp className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 bg-gray-900 dark:bg-gray-100 rounded-lg flex items-center justify-center mb-4">
+                    <TrendingUp className="w-5 h-5 text-white dark:text-gray-900" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Sales Tracking</h3>
-                  <p className="text-gray-600 leading-relaxed">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Sales Tracking</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                     Monitor transactions, calculate margins, and manage team performance in real time.
                   </p>
                 </div>
 
                 <div>
-                  <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
-                    <BarChart3 className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 bg-gray-900 dark:bg-gray-100 rounded-lg flex items-center justify-center mb-4">
+                    <BarChart3 className="w-5 h-5 text-white dark:text-gray-900" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics</h3>
-                  <p className="text-gray-600 leading-relaxed">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Analytics</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                     Understand product performance, identify trends, and make data-driven decisions.
                   </p>
                 </div>
 
                 <div>
-                  <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center mb-4">
-                    <Users className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 bg-gray-900 dark:bg-gray-100 rounded-lg flex items-center justify-center mb-4">
+                    <Users className="w-5 h-5 text-white dark:text-gray-900" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Team Access</h3>
-                  <p className="text-gray-600 leading-relaxed">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Team Access</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                     Add users, assign roles, and collaborate across locations with secure access controls.
                   </p>
                 </div>
@@ -217,29 +249,20 @@ export default function LandingAuthPage() {
           </div>
         </div>
 
-        <footer className="border-t border-gray-200 bg-white py-6">
+        <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-6">
           <div className="max-w-6xl mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 © 2025 ShopSmart. All rights reserved.
               </p>
               <div className="flex items-center gap-6">
-                <Link
-                  to="/privacy"
-                  className="text-sm text-gray-600 hover:text-gray-900 transition"
-                >
+                <a href="#" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition">
                   Privacy Policy
-                </Link>
-                <Link
-                  to="/terms"
-                  className="text-sm text-gray-600 hover:text-gray-900 transition"
-                >
+                </a>
+                <a href="#" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition">
                   Terms & Conditions
-                </Link>
-                <a
-                  href="mailto:igntayyab@gmail.com"
-                  className="text-sm text-gray-600 hover:text-gray-900 transition"
-                >
+                </a>
+                <a href="mailto:igntayyab@gmail.com" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition">
                   Contact Us
                 </a>
               </div>
@@ -251,24 +274,27 @@ export default function LandingAuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-6 transition-colors">
 
-      <div className="bg-white border border-gray-200 rounded-lg max-w-md w-full p-8">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg max-w-md w-full p-8">
 
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <Store className="w-6 h-6 text-gray-900" />
-          <span className="text-xl font-semibold text-gray-900">ShopSmart</span>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2">
+            <Store className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+            <span className="text-xl font-semibold text-gray-900 dark:text-gray-100">ShopSmart</span>
+          </div>
+
         </div>
 
-        <div className="flex gap-1 mb-8 bg-gray-100 p-1 rounded-lg">
+        <div className="flex gap-1 mb-8 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
           <button
             onClick={() => {
               setAuthMode('login');
               setError('');
             }}
             className={`flex-1 py-2 rounded-md text-sm font-medium transition ${authMode === 'login'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
           >
             Sign In
@@ -279,17 +305,16 @@ export default function LandingAuthPage() {
               setError('');
             }}
             className={`flex-1 py-2 rounded-md text-sm font-medium transition ${authMode === 'register'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
           >
             Sign Up
           </button>
         </div>
 
-        {/* ✅ ERROR MESSAGE */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-300">
             {error}
           </div>
         )}
@@ -297,7 +322,7 @@ export default function LandingAuthPage() {
         {authMode === 'login' ? (
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email
               </label>
               <input
@@ -305,13 +330,13 @@ export default function LandingAuthPage() {
                 required
                 value={loginData.email}
                 onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                 placeholder="you@company.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Password
               </label>
               <input
@@ -319,7 +344,7 @@ export default function LandingAuthPage() {
                 required
                 value={loginData.password}
                 onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                 placeholder="••••••••"
               />
             </div>
@@ -327,8 +352,7 @@ export default function LandingAuthPage() {
             <div className="text-right">
               <button
                 type="button"
-                onClick={() => navigate('/forgot-password')}
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
               >
                 Forgot Password?
               </button>
@@ -337,14 +361,14 @@ export default function LandingAuthPage() {
             <button
               onClick={handleLogin}
               disabled={loading}
-              className="w-full py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
 
             <button
               onClick={() => setShowAuth(false)}
-              className="w-full text-gray-600 hover:text-gray-900 text-sm transition"
+              className="w-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 text-sm transition"
             >
               ← Back
             </button>
@@ -353,7 +377,7 @@ export default function LandingAuthPage() {
           <div className="space-y-4">
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Business Name
               </label>
               <input
@@ -361,13 +385,13 @@ export default function LandingAuthPage() {
                 required
                 value={registerData.business_name}
                 onChange={(e) => setRegisterData({ ...registerData, business_name: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                 placeholder="My Cloth Shop"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Owner Name
               </label>
               <input
@@ -375,13 +399,13 @@ export default function LandingAuthPage() {
                 required
                 value={registerData.owner_name}
                 onChange={(e) => setRegisterData({ ...registerData, owner_name: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                 placeholder="Your name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email
               </label>
               <input
@@ -389,49 +413,49 @@ export default function LandingAuthPage() {
                 required
                 value={registerData.email}
                 onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                 placeholder="you@company.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Phone
               </label>
               <input
                 type="tel"
                 value={registerData.phone}
                 onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                 placeholder="03XX-XXXXXXX"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City</label>
                 <input
                   type="text"
                   value={registerData.city}
                   onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                   placeholder="Lahore"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">State</label>
                 <input
                   type="text"
                   value={registerData.state}
                   onChange={(e) => setRegisterData({ ...registerData, state: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                   placeholder="Punjab"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Password
               </label>
               <input
@@ -439,13 +463,13 @@ export default function LandingAuthPage() {
                 required
                 value={registerData.password}
                 onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                 placeholder="Min. 8 characters"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Confirm Password
               </label>
               <input
@@ -453,33 +477,33 @@ export default function LandingAuthPage() {
                 required
                 value={registerData.confirm_password}
                 onChange={(e) => setRegisterData({ ...registerData, confirm_password: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent"
                 placeholder="Re-enter password"
               />
             </div>
 
-            <div className="text-xs text-gray-600 text-center">
+            <div className="text-xs text-gray-600 dark:text-gray-400 text-center">
               By signing up, you agree to our{' '}
-              <Link to="/terms" className="text-blue-600 hover:underline">
+              <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Terms & Conditions
-              </Link>
+              </a>
               {' '}and{' '}
-              <Link to="/privacy" className="text-blue-600 hover:underline">
+              <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Privacy Policy
-              </Link>
+              </a>
             </div>
 
             <button
               onClick={handleRegister}
               disabled={loading}
-              className="w-full py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Start Free Trial'}
             </button>
 
             <button
               onClick={() => setShowAuth(false)}
-              className="w-full text-gray-600 hover:text-gray-900 text-sm transition"
+              className="w-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 text-sm transition"
             >
               ← Back
             </button>

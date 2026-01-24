@@ -129,32 +129,40 @@ class CustomerLoanResponse(BaseModel):
         from_attributes = True
 
 
-# Sale Schemas - UPDATED
 class SaleBase(BaseModel):
     salesperson_name: str = Field(..., min_length=1, max_length=100)
-    variety_id: int
+    variety_id: Optional[int] = None
+    variety_name: Optional[str] = Field(None, min_length=1, max_length=100)
     quantity: float = Field(..., gt=0)
     selling_price: Decimal = Field(..., gt=0, decimal_places=2)
     cost_price: Decimal = Field(..., gt=0, decimal_places=2)
     sale_date: date
-    stock_type: StockType = StockType.OLD_STOCK
     supplier_inventory_id: Optional[int] = None
     
-    # 🆕 ADD THESE FIELDS
     payment_status: PaymentStatus = PaymentStatus.PAID
     customer_name: Optional[str] = None
+    
+    @field_validator('variety_id')
+    @classmethod
+    def validate_variety_id(cls, v, info):
+        variety_name = info.data.get('variety_name')
+        if not v and not variety_name:
+            raise ValueError('Either variety_id or variety_name must be provided')
+        return v
     
     @field_validator('selling_price')
     @classmethod
     def validate_selling_price(cls, v, info):
-        if 'cost_price' in info.data and v < info.data['cost_price']:
+        cost_price = info.data.get('cost_price')
+        if cost_price and v < cost_price:
             raise ValueError('Selling price should not be less than cost price')
         return v
     
     @field_validator('customer_name')
     @classmethod
     def validate_customer_name(cls, v, info):
-        if 'payment_status' in info.data and info.data['payment_status'] == PaymentStatus.LOAN:
+        payment_status = info.data.get('payment_status')
+        if payment_status == PaymentStatus.LOAN:
             if not v or not v.strip():
                 raise ValueError('Customer name is required for loan sales')
         return v
@@ -167,8 +175,8 @@ class SaleResponse(SaleBase):
     profit: Decimal
     sale_timestamp: datetime
     supplier_inventory_id: Optional[int] = None
-    variety: ClothVarietyResponse
-    customer_loan: Optional[CustomerLoanResponse] = None
+    variety: 'ClothVarietyResponse'  # Forward reference
+    customer_loan: Optional['CustomerLoanResponse'] = None
     
     class Config:
         from_attributes = True
