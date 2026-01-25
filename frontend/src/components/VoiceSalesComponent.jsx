@@ -37,15 +37,23 @@ const VoiceSalesComponent = () => {
 
   // Voice states
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [validationResult, setValidationResult] = useState(null);
   const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
+
+  const [recordingQueue, setRecordingQueue] = useState([]); // Queue of recordings
+  const [processingCount, setProcessingCount] = useState(0); // How many processing
+  const [recentResults, setRecentResults] = useState([]); // Last 3 results
+  const [recordingNumber, setRecordingNumber] = useState(1); // Counter
+
+  const [autoSubmit, setAutoSubmit] = useState(true); // NEW
+  const [processingQueue, setProcessingQueue] = useState([]); // NEW
+  const [lastSaleId, setLastSaleId] = useState(null); // NEW for undo
+
+
 
   useEffect(() => {
     loadVarieties();
@@ -101,7 +109,7 @@ const VoiceSalesComponent = () => {
     try {
       setError(null);
       setTranscript('');
-      setValidationResult(null);
+      // setValidationResult(null);
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -137,14 +145,28 @@ const VoiceSalesComponent = () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
+
+      // INSTANT: Ready for next recording immediately
+      // Processing happens in background via mediaRecorder.onstop
     }
   };
 
+
+  // Updated processAudio - non-blocking background processing
   const processAudio = async (audioBlob) => {
-    setIsProcessing(true);
-    setError(null);
+    const recordingId = recordingNumber;
+    setRecordingNumber(prev => prev + 1);
+    setProcessingCount(prev => prev + 1);
+
+    // Add to processing queue
+    setRecordingQueue(prev => [...prev, {
+      id: recordingId,
+      status: 'transcribing',
+      timestamp: new Date()
+    }]);
 
     try {
+      // Step 1: Transcribe
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
 
@@ -153,8 +175,15 @@ const VoiceSalesComponent = () => {
       });
 
       const transcribeData = transcribeResponse.data;
-      setTranscript(transcribeData.transcript);
 
+      // Update queue status
+      setRecordingQueue(prev => prev.map(item => 
+        item.id === recordingId 
+          ? { ...item, status: 'validating', transcript: transcribeData.transcript }
+          : item
+      ));
+
+      // Step 2: Validate
       const validateResponse = await api.post('/sales/voice/validate', {
         transcript: transcribeData.transcript
       });
@@ -162,18 +191,115 @@ const VoiceSalesComponent = () => {
       const validationData = validateResponse.data;
 
       if (!validationData.success) {
-        setError(validationData.message || 'Failed to understand command');
-        setValidationResult(null);
+        // Mark as error
+        setRecordingQueue(prev => prev.map(item => 
+          item.id === recordingId 
+            ? { ...item, status: 'error', error: validationData.message }
+            : item
+        ));
+        setProcessingCount(prev => prev - 1);
+        
+        // Add to recent results
+        addRecentResult({
+          id: recordingId,
+          type: 'error',
+          message: validationData.message,
+          transcript: transcribeData.transcript
+        });
         return;
       }
 
-      setValidationResult(validationData);
+      // Update to submitting
+      setRecordingQueue(prev => prev.map(item => 
+        item.id === recordingId 
+          ? { ...item, status: 'submitting', data: validationData }
+          : item
+      ));
+
+      // Step 3: Submit
+      const response = await api.post('/sales/voice/record-sale', validationData.sale_data);
+
+      // Success!
+      setRecordingQueue(prev => prev.filter(item => item.id !== recordingId));
+      setProcessingCount(prev => prev - 1);
+
+      addRecentResult({
+        id: recordingId,
+        type: 'success',
+        message: response.data.message,
+        transcript: transcribeData.transcript,
+        saleId: response.data.sale_id,
+        profit: response.data.total_profit
+      });
+
+      loadSales();
+      loadVarieties();
 
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Failed to process audio');
-      console.error('Processing error:', err);
-    } finally {
-      setIsProcessing(false);
+      setRecordingQueue(prev => prev.filter(item => item.id !== recordingId));
+      setProcessingCount(prev => prev - 1);
+
+      let errorMessage = 'Failed to process';
+      if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      }
+
+      addRecentResult({
+        id: recordingId,
+        type: 'error',
+        message: errorMessage,
+        transcript: 'Processing failed'
+      });
+    }
+  };
+
+  // Helper to add recent results (keep last 5)
+  const addRecentResult = (result) => {
+    setRecentResults(prev => [result, ...prev].slice(0, 5));
+    
+    // Auto-clear success messages after 5 seconds
+    if (result.type === 'success') {
+      setTimeout(() => {
+        setRecentResults(prev => prev.filter(r => r.id !== result.id));
+      }, 5000);
+    }
+  };
+
+  // NEW: Auto-confirm and submit
+  const autoConfirmAndSubmit = async (validationData) => {
+    try {
+      const response = await api.post('/sales/voice/record-sale', validationData.sale_data);
+
+      setLastSaleId(response.data.sale_id); // For undo
+
+      let msg = '✅ Sale recorded!';
+      if (response.data.variety_created) msg += ' New variety created.';
+      if (response.data.inventory_created) msg += ' Inventory added.';
+
+      setSuccessMessage(msg);
+      setTranscript('');
+      setValidationResult(null);
+      loadSales();
+      loadVarieties();
+
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to record sale');
+    }
+  };
+
+  // NEW: Undo last sale
+  const undoLastSale = async () => {
+    if (!lastSaleId) return;
+
+    if (!confirm('Undo the last sale?')) return;
+
+    try {
+      await handleDelete(lastSaleId);
+      setLastSaleId(null);
+      setSuccessMessage('Last sale undone!');
+    } catch (err) {
+      setError('Failed to undo sale');
     }
   };
 
@@ -219,323 +345,132 @@ const VoiceSalesComponent = () => {
     return sum + getItemCount(item.quantity, item.variety.measurement_unit);
   }, 0);
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
+return (
+  <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 md:p-6">
+    <div className="max-w-7xl mx-auto">
 
-        {/* HEADER */}
-        <div className="mb-4 sm:mb-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
-            <div className="flex-1">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
-                Voice Command Sales
-              </h2>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
-                Record sales naturally using your voice - auto-creates varieties & inventory
-              </p>
+      {/* HEADER */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
+          <div className="flex-1">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
+              Voice Sales - Quick Mode
+            </h2>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+              Keep recording - we'll process in background ⚡
+            </p>
+          </div>
+
+          {/* Processing indicator */}
+          {processingCount > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+              <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                Processing {processingCount} sale{processingCount > 1 ? 's' : ''}
+              </span>
             </div>
+          )}
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button
-                onClick={() => setShowExamples(!showExamples)}
-                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition active:scale-95"
-              >
-                <Info size={18} />
-                <span className="text-sm font-medium">Examples</span>
-              </button>
-
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 sm:px-4 py-2">
-                <Calendar size={18} className="text-gray-500 dark:text-gray-400 shrink-0" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent text-gray-800 dark:text-gray-100 focus:outline-none text-sm sm:text-base w-full"
-                />
-              </div>
-            </div>
+          <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 sm:px-4 py-2">
+            <Calendar size={18} className="text-gray-500 dark:text-gray-400 shrink-0" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-transparent text-gray-800 dark:text-gray-100 focus:outline-none text-sm sm:text-base w-full"
+            />
           </div>
         </div>
+      </div>
 
-        {/* EXAMPLES PANEL */}
-        {showExamples && examples && (
-          <div className="mb-4 sm:mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg sm:rounded-xl p-4 sm:p-6">
-            <div className="flex items-start justify-between mb-3 sm:mb-4">
-              <h3 className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-100">
-                Voice Command Examples
-              </h3>
-              <button
-                onClick={() => setShowExamples(false)}
-                className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition lg:hidden"
-                aria-label="Close examples"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <h4 className="text-xs sm:text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">
-                  Basic Sales
-                </h4>
-                <ul className="space-y-2">
-                  {examples.basic_examples.map((ex, i) => (
-                    <li key={i} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 p-2.5 sm:p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-                      "{ex}"
-                    </li>
-                  ))}
-                </ul>
+      {/* RECORDING BUTTON - Always Ready */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 md:p-8 mb-4">
+        <div className="flex justify-center">
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`relative w-32 h-32 sm:w-40 sm:h-40 rounded-full flex items-center justify-center transition-all duration-300 ${
+              isRecording
+                ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                : 'bg-blue-500 hover:bg-blue-600 hover:scale-105'
+            } cursor-pointer shadow-lg active:scale-95`}
+          >
+            {isRecording ? (
+              <div className="flex flex-col items-center">
+                <StopCircle className="text-white" size={48} />
+                <span className="text-white text-sm mt-2 font-medium">Stop</span>
               </div>
-
-              <div>
-                <h4 className="text-xs sm:text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">
-                  Loan/Credit Sales
-                </h4>
-                <ul className="space-y-2">
-                  {examples.loan_examples.map((ex, i) => (
-                    <li key={i} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 p-2.5 sm:p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-                      "{ex}"
-                    </li>
-                  ))}
-                </ul>
+            ) : (
+              <div className="flex flex-col items-center">
+                <Mic className="text-white" size={48} />
+                <span className="text-white text-sm mt-2 font-medium">
+                  {processingCount > 0 ? 'Next Sale' : 'Start'}
+                </span>
               </div>
+            )}
+          </button>
+        </div>
 
-              <div>
-                <h4 className="text-xs sm:text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">
-                  Tips
-                </h4>
-                <ul className="space-y-2">
-                  {examples.tips.map((tip, i) => (
-                    <li key={i} className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
-                      <span className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0">•</span>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SUCCESS MESSAGE */}
-        {successMessage && (
-          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2 sm:gap-3">
-            <CheckCircle className="text-green-600 dark:text-green-400 shrink-0" size={20} />
-            <p className="text-sm sm:text-base text-green-800 dark:text-green-200 font-medium">
-              {successMessage}
+        {isRecording && (
+          <div className="text-center mt-4">
+            <p className="text-sm sm:text-base text-red-600 dark:text-red-400 font-medium flex items-center justify-center gap-2">
+              <Volume2 size={20} className="animate-pulse" />
+              Recording... Speak now
             </p>
           </div>
         )}
 
-        {/* VOICE COMMAND SECTION */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 md:p-8 mb-4 sm:mb-6">
-          <div className="text-center mb-4 sm:mb-6">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-              Voice Command
-            </h3>
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-              Click the microphone and speak naturally. AI will extract all details and auto-create varieties if needed.
+        {/* Quick Stats */}
+        {processingCount === 0 && recentResults.length === 0 && (
+          <div className="text-center mt-6">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Ready to record. Speak naturally - we'll handle the rest!
             </p>
           </div>
+        )}
+      </div>
 
-          {/* RECORDING BUTTON */}
-          <div className="flex justify-center mb-4 sm:mb-6">
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={isProcessing}
-              className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center transition-all duration-300 ${isRecording
-                  ? 'bg-red-500 hover:bg-red-600 animate-pulse'
-                  : 'bg-blue-500 hover:bg-blue-600 hover:scale-105'
-                } ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer shadow-lg active:scale-95'}`}
+      {/* RECENT RESULTS - Compact Toast-style */}
+      {recentResults.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {recentResults.map((result) => (
+            <div
+              key={result.id}
+              className={`p-3 rounded-lg border animate-slide-in ${
+                result.type === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+              }`}
             >
-              {isProcessing ? (
-                <Loader className="text-white animate-spin" size={40} />
-              ) : isRecording ? (
-                <div className="flex flex-col items-center">
-                  <StopCircle className="text-white" size={40} />
-                  <span className="text-white text-xs mt-2 font-medium">Stop</span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center">
-                  <Mic className="text-white" size={40} />
-                  <span className="text-white text-xs mt-2 font-medium">Start</span>
-                </div>
-              )}
-            </button>
-          </div>
-
-          {/* STATUS MESSAGES */}
-          {isRecording && (
-            <div className="text-center mb-4">
-              <p className="text-sm sm:text-base text-red-600 dark:text-red-400 font-medium flex items-center justify-center gap-2">
-                <Volume2 size={20} className="animate-pulse" />
-                Listening... Speak now
-              </p>
-            </div>
-          )}
-
-          {isProcessing && (
-            <div className="text-center mb-4">
-              <p className="text-sm sm:text-base text-blue-600 dark:text-blue-400 font-medium flex items-center justify-center gap-2">
-                <Loader size={20} className="animate-spin" />
-                Processing with AI...
-              </p>
-            </div>
-          )}
-
-          {/* TRANSCRIPT */}
-          {transcript && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-medium mb-2">
-                Transcript:
-              </p>
-              <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200">{transcript}</p>
-            </div>
-          )}
-
-          {/* ERROR */}
-          {error && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2 sm:gap-3">
-              <AlertCircle className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" size={20} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm sm:text-base text-red-800 dark:text-red-200 font-medium">Error</p>
-                <p className="text-xs sm:text-sm text-red-700 dark:text-red-300 mt-1 wrap-break-word">
-                  {error}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* VALIDATION RESULT */}
-          {validationResult && validationResult.success && (
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 sm:p-6 mb-4">
-                <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                  <CheckCircle className="text-green-600 dark:text-green-400 shrink-0" size={24} />
-                  <h4 className="text-base sm:text-lg font-bold text-green-800 dark:text-green-100">
-                    Command Understood!
-                  </h4>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Salesperson:</p>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 wrap-break-word">
-                      {user?.full_name || 'You'}  {/* ← NEW */}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Variety:</p>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-gray-900 dark:text-gray-100 wrap-break-word">
-                        {validationResult.variety_name}
-                      </p>
-                      {validationResult.is_new_variety && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                          <Plus size={10} className="mr-1" />
-                          New
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Quantity:</p>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">
-                      {validationResult.sale_data.quantity} {validationResult.measurement_unit}
-                    </p>
-                  </div>
-
-
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Payment:</p>
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${validationResult.sale_data.payment_status === 'paid'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                        : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
-                      }`}>
-                      {validationResult.sale_data.payment_status === 'paid' ? (
-                        <>
-                          <Wallet size={12} className="mr-1" />
-                          Paid
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard size={12} className="mr-1" />
-                          Loan
-                        </>
-                      )}
-                    </span>
-                  </div>
-
-                  {validationResult.sale_data.customer_name && (
-                    <div>
-                      <p className="text-gray-600 dark:text-gray-400 mb-1">Customer:</p>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100 wrap-break-word">
-                        {validationResult.sale_data.customer_name}
-                      </p>
-                    </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {result.type === 'success' ? (
+                    <CheckCircle size={16} className="text-green-600 dark:text-green-400" />
+                  ) : (
+                    <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
                   )}
-
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Total Cost:</p>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">
-                      ₹{validationResult.sale_data.cost_price}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Total Selling:</p>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">
-                      ₹{validationResult.sale_data.selling_price}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Expected Profit:</p>
-                    <p className="font-semibold text-green-600 dark:text-green-400">
-                      ₹{(validationResult.sale_data.selling_price - validationResult.sale_data.cost_price).toFixed(2)}
-                    </p>
-                  </div>
+                  <span className={`text-sm font-medium ${
+                    result.type === 'success'
+                      ? 'text-green-800 dark:text-green-200'
+                      : 'text-red-800 dark:text-red-200'
+                  }`}>
+                    {result.message}
+                  </span>
                 </div>
-
-                {/* AUTO-CREATION INFO (like SaleForm) */}
-                {validationResult.is_new_variety && (
-                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <Plus className="text-blue-600 dark:text-blue-400 mt-0.5" size={18} />
-                      <div>
-                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                          Creating New Variety
-                        </p>
-                        <p className="text-xs text-blue-700 dark:text-blue-300">
-                          "{validationResult.variety_name}" will be created automatically with default settings.
-                          Inventory will also be auto-created. You can update details later.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                {result.profit && (
+                  <span className="text-sm font-bold text-green-700 dark:text-green-400">
+                    +₹{result.profit.toFixed(2)}
+                  </span>
                 )}
-
-                <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6">
-                  <button
-                    onClick={confirmAndSubmit}
-                    disabled={isProcessing}
-                    className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-green-600 dark:bg-green-700 text-white rounded-lg text-sm sm:text-base font-medium hover:bg-green-700 dark:hover:bg-green-800 transition disabled:opacity-50 active:scale-95"
-                  >
-                    ✓ Confirm & Record Sale
-                  </button>
-                  <button
-                    onClick={cancelValidation}
-                    className="px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition active:scale-95"
-                  >
-                    Cancel
-                  </button>
-                </div>
               </div>
+              {result.transcript && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 truncate">
+                  "{result.transcript}"
+                </p>
+              )}
             </div>
-          )}
+          ))}
         </div>
+      )}
 
         {/* SALES TABLE */}
         <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
@@ -620,8 +555,8 @@ const VoiceSalesComponent = () => {
 
                     <div className="flex flex-wrap gap-2 mb-3">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.payment_status === 'paid'
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                          : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                        : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
                         }`}>
                         {item.payment_status === 'paid' ? '✓ Paid' : '⏱ Loan'}
                       </span>
@@ -686,8 +621,8 @@ const VoiceSalesComponent = () => {
                       <tr
                         key={item.id}
                         className={`border-t border-gray-200 dark:border-gray-700 ${idx % 2 === 0
-                            ? 'bg-white dark:bg-gray-800'
-                            : 'bg-gray-50 dark:bg-gray-700'
+                          ? 'bg-white dark:bg-gray-800'
+                          : 'bg-gray-50 dark:bg-gray-700'
                           } hover:bg-gray-100 dark:hover:bg-gray-600 transition`}
                       >
                         <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200 capitalize">
@@ -703,8 +638,8 @@ const VoiceSalesComponent = () => {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.payment_status === 'paid'
-                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                              : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                            : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
                             }`}>
                             {item.payment_status === 'paid' ? '✓ Paid' : '⏱ Loan'}
                           </span>
@@ -747,7 +682,25 @@ const VoiceSalesComponent = () => {
           )}
         </div>
       </div>
+          {/* CSS for animations */}
+    <style>{`
+      @keyframes slide-in {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      .animate-slide-in {
+        animation: slide-in 0.3s ease-out;
+      }
+    `}</style>
     </div>
+
+    
   );
 };
 
