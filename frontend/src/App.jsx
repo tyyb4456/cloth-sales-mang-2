@@ -27,6 +27,7 @@ import ResetPassword from './components/auth/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 
+import AIAgentPage from './pages/AIAgent';
 import TeamManagement from './pages/TeamManagement';
 
 
@@ -55,7 +56,7 @@ function AuthProvider({ children }) {
     const token = localStorage.getItem('access_token');
     const storedUser = localStorage.getItem('user');
     const storedTenant = localStorage.getItem('tenant');
-    
+
     if (token && storedUser && storedTenant) {
       setIsAuthenticated(true);
       setUser(JSON.parse(storedUser));
@@ -69,7 +70,7 @@ function AuthProvider({ children }) {
     localStorage.setItem('refresh_token', refreshToken);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('tenant', JSON.stringify(tenantData));
-    
+
     setIsAuthenticated(true);
     setUser(userData);
     setTenant(tenantData);
@@ -192,6 +193,13 @@ function App() {
               <Layout><AIChatbot /></Layout>
             </ProtectedRoute>
           } />
+
+          <Route path="/ai-agent" element={
+            <ProtectedRoute>
+              <Layout><AIAgentPage /></Layout>
+            </ProtectedRoute>
+          } />
+
 
           <Route path="/ExpenseTracker" element={
             <ProtectedRoute>

@@ -28,29 +28,38 @@ from rbac import require_permission, Permission
 router = APIRouter(prefix="/sales/voice", tags=["Voice Sales"])
 
 
-# ==================== PYDANTIC SCHEMAS ====================
+# ==================== UPDATED PYDANTIC SCHEMAS ====================
 
 class VoiceSaleData(BaseModel):
-    """Structured output from AI for voice commands - NO STOCK TYPE"""
+    """Structured output from AI for voice commands - FLEXIBLE COST"""
     success: bool
+    salesperson_name: str = Field(default="voice sale", min_length=1) 
     variety_name: str
-    measurement_unit: str
+    # REMOVED: variety_id (AI doesn't know database IDs)
+    measurement_unit: Optional[str] = "pieces"  # Optional with default
     quantity: float = Field(..., gt=0)
-    cost_price: Optional[Decimal] = Field(None, ge=0)  # Optional - can be fetched from variety
-    selling_price: Decimal = Field(..., gt=0)
+    
+    # FLEXIBLE: Cost can be 0 if unknown
+    cost_price: Optional[Decimal] = Field(default=None)  # Allow None
+    selling_price: Decimal = Field(..., gt=0)  # Selling must still be > 0
     payment_status: Literal["paid", "loan"] = "paid"
     customer_name: Optional[str] = None
     sale_date: date = Field(default_factory=date.today)
     message: Optional[str] = None
+    cost_unknown: bool = Field(default=False)  # Flag to indicate cost is unknown
     
     @field_validator('payment_status', mode='before')
     def normalize_payment_status(cls, v):
+        """Normalize payment status - handle AI variations"""
         if not v:
             return "paid"
+        
         v = str(v).lower().strip()
+        
         if v in ['loan', 'credit', 'udhaar', 'unpaid', 'on loan', 'on credit', 'pending']:
             return 'loan'
-        return 'paid'
+        else:
+            return 'paid'
     
     @field_validator('customer_name')
     def validate_customer_for_loan(cls, v, info):
@@ -70,7 +79,9 @@ class VoiceValidationResponse(BaseModel):
     sale_data: Optional[Dict] = None
     variety_name: Optional[str] = None
     measurement_unit: Optional[str] = None
-    is_new_variety: Optional[bool] = None
+    is_new_variety: bool = False
+    cost_unknown: bool = False
+    cost_source: Optional[str] = None 
 
 
 # ==================== TRANSCRIPTION ====================
@@ -157,7 +168,7 @@ async def validate_voice_command(
     """
     Validate voice command using AI
     SMART: Detects if variety exists or needs creation
-    NO STOCK TYPE - All sales auto-create inventory
+    ROBUST: Handles missing cost price gracefully
     """
     
     if not GEMINI_AVAILABLE:
@@ -190,26 +201,77 @@ CRITICAL RULES:
    - If it matches an available variety (case-insensitive), use the EXACT name
    - If it's a NEW variety name, extract it as-is
    - Common cloth names: cotton, linen, silk, lawn, wash and wear, polyester, etc.
-2. measurement_unit: Extract from command OR infer from variety OR default to "pieces"
-3. payment_status: "paid" OR "loan" (lowercase)
-4. cost_price: REQUIRED - Extract total cost (cost_per_unit × quantity)
-5. selling_price: REQUIRED - Extract total selling (selling_per_unit × quantity)
 
-PAYMENT:
-- "loan", "credit", "udhaar" → payment_status: "loan" (MUST include customer_name)
-- Otherwise → payment_status: "paid"
+2. measurement_unit: Extract from command OR infer from context OR default to "pieces"
+   - Common units: pieces, meters, yards
+
+3. payment_status: "paid" OR "loan" (lowercase)
+   - "loan", "credit", "udhaar" → payment_status: "loan" (MUST include customer_name)
+   - Otherwise → payment_status: "paid"
+
+4. cost_price: OPTIONAL
+   - If mentioned: Extract total cost (cost_per_unit × quantity)
+   - If NOT mentioned: Set to null AND set cost_unknown to true
+   - NEVER fail if cost is missing - just mark it as unknown
+
+5. selling_price: REQUIRED
+   - Always extract total selling price (selling_per_unit × quantity)
 
 Examples:
+
 Input: "50 meters linen, cost 500 per meter, selling 600"
-Output: variety_name: "linen", quantity: 50, cost_price: 25000, selling_price: 30000
+Output: {{
+  "success": true,
+  "variety_name": "linen",
+  "quantity": 50,
+  "measurement_unit": "meters",
+  "cost_price": 25000,
+  "selling_price": 30000,
+  "cost_unknown": false
+}}
 
 Input: "5 unit washing ware selling 500 per meter and cost price 200 per meter"
-Output: variety_name: "washing ware", quantity: 5, measurement_unit: "meters", cost_price: 1000, selling_price: 2500
+Output: {{
+  "success": true,
+  "variety_name": "washing ware",
+  "quantity": 5,
+  "measurement_unit": "meters",
+  "cost_price": 1000,
+  "selling_price": 2500,
+  "cost_unknown": false
+}}
 
 Input: "20 pieces cotton on loan to Ahmed, cost 100 each, selling 150"
-Output: variety_name: "cotton", quantity: 20, cost_price: 2000, selling_price: 3000, payment_status: "loan", customer_name: "Ahmed"
+Output: {{
+  "success": true,
+  "variety_name": "cotton",
+  "quantity": 20,
+  "measurement_unit": "pieces",
+  "cost_price": 2000,
+  "selling_price": 3000,
+  "payment_status": "loan",
+  "customer_name": "Ahmed",
+  "cost_unknown": false
+}}
 
-IMPORTANT: Always extract variety_name, even if it's not in the available varieties list. New varieties will be created automatically.
+Input: "sold 30 yards linen on loan to Ahmed, selling 250 per yard"
+Output: {{
+  "success": true,
+  "variety_name": "linen",
+  "quantity": 30,
+  "measurement_unit": "yards",
+  "cost_price": null,
+  "selling_price": 7500,
+  "payment_status": "loan",
+  "customer_name": "Ahmed",
+  "cost_unknown": true
+}}
+
+IMPORTANT: 
+- Always extract variety_name, even if not in available varieties
+- Cost price can be null if not mentioned
+- Set cost_unknown: true when cost not mentioned
+- NEVER fail due to missing cost - just set it to null
 
 User command: "{request.transcript}"
 """
@@ -224,7 +286,7 @@ User command: "{request.transcript}"
         
         # Use structured output
         model = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model="gemini-2.0-flash-exp",
             api_key=api_key,
             temperature=0.1
         )
@@ -238,7 +300,7 @@ User command: "{request.transcript}"
                 message=result.message or "Failed to parse command"
             )
         
-        # SMART: Check if variety exists
+        # ========== VARIETY CHECK ==========
         variety = db.query(ClothVariety).filter(
             ClothVariety.tenant_id == tenant.id,
             ClothVariety.name.ilike(result.variety_name)
@@ -246,23 +308,24 @@ User command: "{request.transcript}"
         
         is_new_variety = variety is None
         
-        # If NEW variety, infer measurement unit from command or default to pieces
+        # Determine measurement unit
         if is_new_variety:
             measurement_unit = result.measurement_unit or "pieces"
             print(f"🆕 New variety detected: '{result.variety_name}' ({measurement_unit})")
         else:
-            # Use existing variety's unit
             measurement_unit = variety.measurement_unit
             print(f"✅ Existing variety found: '{variety.name}' ({measurement_unit})")
         
         # ========== SMART COST PRICE DETECTION ==========
         cost_price = result.cost_price
-        cost_source = "voice"  # Track where cost came from
+        cost_source = None
+        cost_unknown = result.cost_unknown or (cost_price is None)
         
+        # If cost not provided in voice command, try fallbacks
         if cost_price is None or cost_price == 0:
             print(f"💰 Cost price not in voice command, checking fallbacks...")
             
-            # PRIORITY 1: Check latest inventory for this variety (FIFO)
+            # FALLBACK 1: Latest inventory (FIFO)
             if variety:
                 latest_inventory = db.query(SupplierInventory).filter(
                     SupplierInventory.variety_id == variety.id,
@@ -273,46 +336,51 @@ User command: "{request.transcript}"
                 if latest_inventory:
                     cost_per_unit = Decimal(str(latest_inventory.price_per_item))
                     cost_price = cost_per_unit * Decimal(str(result.quantity))
-                    cost_source = f"inventory ({latest_inventory.supplier_name})"
+                    cost_source = f"latest_inventory"
+                    cost_unknown = False
                     print(f"✅ Using inventory cost: ₹{cost_per_unit}/unit from {latest_inventory.supplier_name}")
             
-            # PRIORITY 2: Check variety default cost price
+            # FALLBACK 2: Variety default cost price
             if (cost_price is None or cost_price == 0) and variety and variety.default_cost_price:
                 cost_per_unit = Decimal(str(variety.default_cost_price))
                 cost_price = cost_per_unit * Decimal(str(result.quantity))
-                cost_source = "variety default"
+                cost_source = "variety_default"
+                cost_unknown = False
                 print(f"✅ Using variety default cost: ₹{cost_per_unit}/unit")
             
-            # PRIORITY 3: No cost price available - ERROR
+            # FALLBACK 3: Still no cost - use placeholder (both new and existing)
             if cost_price is None or cost_price == 0:
+                # Use 0 as placeholder - user can update later
+                cost_price = Decimal('0')
+                cost_source = "placeholder"
+                cost_unknown = True
+                
                 if is_new_variety:
-                    return VoiceValidationResponse(
-                        success=False,
-                        message=f"'{result.variety_name}' is a new variety. Please mention cost price to create it.",
-                        variety_name=result.variety_name,
-                        is_new_variety=True
-                    )
+                    print(f"⚠️ New variety '{result.variety_name}' will be created with 0 cost - needs update later")
                 else:
-                    return VoiceValidationResponse(
-                        success=False,
-                        message=f"Cost price not found for '{result.variety_name}'. Please mention cost price, add inventory, or set default cost in variety settings.",
-                        variety_name=result.variety_name,
-                        is_new_variety=False
-                    )
+                    print(f"⚠️ No cost price available for '{result.variety_name}' - using 0")
+        else:
+            # Cost provided in voice command
+            cost_source = "voice_command"
+            cost_unknown = False
         
-        # Build success message
+        # ========== BUILD SUCCESS MESSAGE ==========
         if is_new_variety:
             success_msg = f"✨ New variety '{result.variety_name}' will be created"
+            if cost_unknown:
+                success_msg += " ⚠️ with 0 cost price - please update later"
         else:
             success_msg = f"✅ Using variety '{variety.name}'"
         
         # Add cost source info
-        if cost_source != "voice":
+        if cost_source == "latest_inventory":
             cost_per_unit = float(cost_price) / float(result.quantity)
-            if cost_source.startswith("inventory"):
-                success_msg += f" (cost from latest inventory: ₹{cost_per_unit:.2f}/unit)"
-            elif cost_source == "variety default":
-                success_msg += f" (cost from variety default: ₹{cost_per_unit:.2f}/unit)"
+            success_msg += f" (cost from latest inventory: ₹{cost_per_unit:.2f}/unit)"
+        elif cost_source == "variety_default":
+            cost_per_unit = float(cost_price) / float(result.quantity)
+            success_msg += f" (cost from variety default: ₹{cost_per_unit:.2f}/unit)"
+        elif cost_source == "placeholder" and not is_new_variety:
+            success_msg += " ⚠️ No cost price available - profit will be incorrect"
         
         return VoiceValidationResponse(
             success=True,
@@ -320,28 +388,29 @@ User command: "{request.transcript}"
             sale_data={
                 "variety_name": result.variety_name,
                 "quantity": float(result.quantity),
-                "cost_price": float(cost_price),  # Use calculated/fetched cost_price
+                "cost_price": float(cost_price) if cost_price else 0,
                 "selling_price": float(result.selling_price),
                 "payment_status": result.payment_status,
                 "customer_name": result.customer_name,
-                "sale_date": result.sale_date.isoformat()
+                "sale_date": result.sale_date.isoformat(),
             },
             variety_name=result.variety_name,
             measurement_unit=measurement_unit,
-            is_new_variety=is_new_variety
+            is_new_variety=is_new_variety,
+            cost_unknown=cost_unknown,
+            cost_source=cost_source
         )
         
     except Exception as e:
-        # Better error message
         error_msg = str(e)
         
-        # Make error more user-friendly
-        if "cost_price" in error_msg.lower():
-            error_msg = "Please mention the cost price in your command, or set a default cost price for this variety."
+        # User-friendly error messages
+        if "customer_name" in error_msg.lower():
+            error_msg = "Customer name is required for loan/credit sales. Please mention customer name."
         elif "selling_price" in error_msg.lower():
             error_msg = "Please mention the selling price in your command."
-        elif "customer_name" in error_msg.lower():
-            error_msg = "Customer name is required for loan/credit sales. Please mention customer name."
+        elif "quantity" in error_msg.lower():
+            error_msg = "Please mention the quantity in your command."
         else:
             error_msg = f"Failed to understand command: {error_msg}"
         
@@ -349,7 +418,6 @@ User command: "{request.transcript}"
             status_code=500,
             detail=error_msg
         )
-
 
 # ==================== RECORD SALE (SAME AS sales.py) ====================
 
@@ -502,7 +570,8 @@ async def record_voice_sale(
         "total_profit": float(total_profit),
         "variety_created": variety_created,
         "inventory_created": inventory_created,
-        "stock_deducted": True
+        "stock_deducted": True,
+        "cost_unknown": sale_data.get('cost_unknown', False)
     }
 
 

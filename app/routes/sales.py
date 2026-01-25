@@ -13,8 +13,19 @@ from routes.auth_routes import get_current_tenant
 from auth_models import Tenant, User
 from routes.auth_routes import get_current_user
 from rbac import require_permission, Permission
+# Add this import at the top
+from pydantic import BaseModel
+from typing import Optional
+
+
 
 router = APIRouter(prefix="/sales", tags=["Sales Management"])
+
+# Add this schema after SaleCreate
+class SaleUpdate(BaseModel):
+    """Schema for updating sale (mainly for cost updates)"""
+    cost_price: Optional[Decimal] = None
+    profit: Optional[Decimal] = None
 
 
 # ==================== CREATE SALE WITH AUTO-CREATION ====================
@@ -292,3 +303,52 @@ def get_daily_sales_summary(
         total_quantity_sold=total_quantity,
         sales_count=sales_count
     )
+
+@router.put("/{sale_id}", response_model=SaleResponse)
+def update_sale(
+    sale_id: int,
+    sale_update: SaleUpdate,
+    tenant: Tenant = Depends(get_current_tenant),
+    user: User = Depends(require_permission(Permission.ADD_SALES)),  # Owner or Salesperson can update
+    db: Session = Depends(get_db)
+):
+    """
+    Update a sale record (mainly for updating cost price)
+    
+    Required Permission: ADD_SALES
+    Allowed Roles: Owner, Salesperson
+    """
+    
+    # Get the sale
+    sale = db.query(Sale).filter(
+        Sale.id == sale_id,
+        Sale.tenant_id == tenant.id
+    ).first()
+    
+    if not sale:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Sale not found in your business"
+        )
+    
+    # Update cost_price if provided
+    if sale_update.cost_price is not None:
+        # Recalculate profit
+        quantity = Decimal(str(sale.quantity))
+        new_cost_per_unit = Decimal(str(sale_update.cost_price))
+        selling_per_unit = Decimal(str(sale.selling_price))
+        
+        profit_per_unit = selling_per_unit - new_cost_per_unit
+        total_profit = profit_per_unit * quantity
+        
+        sale.cost_price = new_cost_per_unit
+        sale.profit = total_profit
+    
+    # Update profit directly if provided (alternative method)
+    elif sale_update.profit is not None:
+        sale.profit = Decimal(str(sale_update.profit))
+    
+    db.commit()
+    db.refresh(sale)
+    
+    return sale

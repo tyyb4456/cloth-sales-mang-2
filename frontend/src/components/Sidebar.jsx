@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Boxes,
   Mic,
   DollarSign,   
   Wallet,             
@@ -21,7 +20,7 @@ import {
   Truck,
   RotateCcw,
   ShoppingCart,
-  FileText,
+  Sparkles,
   BarChart3,
   Shield,
   UserPlus
@@ -120,6 +119,13 @@ export default function Sidebar() {
       section: 'AI & Advanced',
       show: true,
       items: [
+
+        { 
+          path: '/ai-agent', 
+          icon: Sparkles,  // Import Sparkles from lucide-react
+          label: 'AI Sales Manager',
+          show: true // Everyone can access (or restrict to owner if needed)
+        },
         { 
           path: '/AIChatbot', 
           icon: MessageSquareText, 
