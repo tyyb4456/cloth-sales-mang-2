@@ -7,8 +7,8 @@ from typing import List
 from datetime import date
 from decimal import Decimal
 from database import get_db
-from models import Sale, ClothVariety, SupplierInventory, InventoryMovement, StockType, MeasurementUnit
-from schemas import SaleCreate, SaleResponse, DailySalesSummary, SalespersonSummary
+from models import Sale, ClothVariety, SupplierInventory, InventoryMovement, StockType, MeasurementUnit, PaymentStatus
+from schemas import SaleCreate, SaleResponse, DailySalesSummary, SalespersonSummary, SaleUpdate
 from routes.auth_routes import get_current_tenant
 from auth_models import Tenant, User
 from routes.auth_routes import get_current_user
@@ -20,12 +20,6 @@ from typing import Optional
 
 
 router = APIRouter(prefix="/sales", tags=["Sales Management"])
-
-# Add this schema after SaleCreate
-class SaleUpdate(BaseModel):
-    """Schema for updating sale (mainly for cost updates)"""
-    cost_price: Optional[Decimal] = None
-    profit: Optional[Decimal] = None
 
 
 # ==================== CREATE SALE WITH AUTO-CREATION ====================
@@ -309,14 +303,16 @@ def update_sale(
     sale_id: int,
     sale_update: SaleUpdate,
     tenant: Tenant = Depends(get_current_tenant),
-    user: User = Depends(require_permission(Permission.ADD_SALES)),  # Owner or Salesperson can update
+    user: User = Depends(require_permission(Permission.ADD_SALES)),
     db: Session = Depends(get_db)
 ):
     """
-    Update a sale record (mainly for updating cost price)
+    Update a sale record - FULL FLEXIBILITY + INVENTORY SYNC
     
-    Required Permission: ADD_SALES
-    Allowed Roles: Owner, Salesperson
+    ✨ NEW: Updates inventory cost price when sale cost is changed
+    
+    Can update: Salesperson, Variety, Quantity, Prices, Payment, Date
+    Required Permission: ADD_SALES (Owner or Salesperson)
     """
     
     # Get the sale
@@ -331,22 +327,171 @@ def update_sale(
             detail=f"Sale not found in your business"
         )
     
-    # Update cost_price if provided
+    # Track changes
+    recalculate_profit = False
+    old_cost_price = sale.cost_price
+    old_quantity = sale.quantity
+    variety_changed = False
+    quantity_changed = False
+    
+    # Update salesperson_name
+    if sale_update.salesperson_name is not None:
+        sale.salesperson_name = sale_update.salesperson_name
+    
+    # Update variety_id
+    if sale_update.variety_id is not None:
+        if sale_update.variety_id != sale.variety_id:
+            variety = db.query(ClothVariety).filter(
+                ClothVariety.id == sale_update.variety_id,
+                ClothVariety.tenant_id == tenant.id
+            ).first()
+            
+            if not variety:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Variety not found in your business"
+                )
+            
+            # 🔄 If variety changes, we need to handle inventory differently
+            variety_changed = True
+            sale.variety_id = sale_update.variety_id
+    
+    # Update quantity
+    if sale_update.quantity is not None:
+        if sale_update.quantity <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Quantity must be greater than 0"
+            )
+        
+        if sale_update.quantity != float(sale.quantity):
+            quantity_changed = True
+            old_quantity = sale.quantity
+        
+        sale.quantity = Decimal(str(sale_update.quantity))
+        recalculate_profit = True
+    
+    # 🆕 UPDATE COST PRICE + SYNC WITH INVENTORY
     if sale_update.cost_price is not None:
-        # Recalculate profit
+        new_cost_price = Decimal(str(sale_update.cost_price))
+        
+        # Only update inventory if cost actually changed
+        if new_cost_price != old_cost_price:
+            sale.cost_price = new_cost_price
+            recalculate_profit = True
+            
+            # 🔄 UPDATE SUPPLIER INVENTORY PRICE (if linked)
+            if sale.supplier_inventory_id:
+                supplier_inventory = db.query(SupplierInventory).filter(
+                    SupplierInventory.id == sale.supplier_inventory_id,
+                    SupplierInventory.tenant_id == tenant.id
+                ).first()
+                
+                if supplier_inventory:
+                    # Calculate new price per item from total cost
+                    quantity = Decimal(str(sale.quantity))
+                    new_price_per_item = new_cost_price
+                    
+                    # Update inventory price
+                    supplier_inventory.price_per_item = new_price_per_item
+                    supplier_inventory.total_amount = new_price_per_item * supplier_inventory.quantity
+                    
+                    print(f"✅ Updated inventory #{sale.supplier_inventory_id} price: ₹{old_cost_price} → ₹{new_price_per_item}")
+            
+            # 🔄 UPDATE VARIETY DEFAULT COST (optional but helpful)
+            variety = db.query(ClothVariety).filter(
+                ClothVariety.id == sale.variety_id,
+                ClothVariety.tenant_id == tenant.id
+            ).first()
+            
+            if variety:
+                # Update variety default cost to the new price
+                variety.default_cost_price = new_cost_price
+                print(f"✅ Updated variety '{variety.name}' default cost: ₹{new_cost_price}")
+    
+    # Update selling_price
+    if sale_update.selling_price is not None:
+        if sale_update.selling_price <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Selling price must be greater than 0"
+            )
+        sale.selling_price = Decimal(str(sale_update.selling_price))
+        recalculate_profit = True
+    
+    # Update payment_status
+    if sale_update.payment_status is not None:
+        sale.payment_status = sale_update.payment_status
+        
+        # If changing to paid, clear customer_name
+        if sale_update.payment_status == PaymentStatus.PAID:
+            sale.customer_name = None
+    
+    # Update customer_name
+    if sale_update.customer_name is not None:
+        if sale.payment_status == PaymentStatus.LOAN and not sale_update.customer_name.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Customer name required for loan sales"
+            )
+        sale.customer_name = sale_update.customer_name if sale.payment_status == PaymentStatus.LOAN else None
+    
+    # Update sale_date
+    if sale_update.sale_date is not None:
+        sale.sale_date = sale_update.sale_date
+    
+    # 🧮 Recalculate profit if needed
+    if recalculate_profit:
         quantity = Decimal(str(sale.quantity))
-        new_cost_per_unit = Decimal(str(sale_update.cost_price))
+        cost_per_unit = Decimal(str(sale.cost_price))
         selling_per_unit = Decimal(str(sale.selling_price))
         
-        profit_per_unit = selling_per_unit - new_cost_per_unit
+        profit_per_unit = selling_per_unit - cost_per_unit
         total_profit = profit_per_unit * quantity
         
-        sale.cost_price = new_cost_per_unit
         sale.profit = total_profit
     
-    # Update profit directly if provided (alternative method)
-    elif sale_update.profit is not None:
+    # Manual profit override (if provided directly)
+    if sale_update.profit is not None:
         sale.profit = Decimal(str(sale_update.profit))
+    
+    # 🔄 Handle quantity changes in inventory
+    if quantity_changed and sale.supplier_inventory_id:
+        supplier_inventory = db.query(SupplierInventory).filter(
+            SupplierInventory.id == sale.supplier_inventory_id,
+            SupplierInventory.tenant_id == tenant.id
+        ).first()
+        
+        if supplier_inventory:
+            # Calculate difference
+            quantity_diff = sale.quantity - old_quantity
+            
+            # Update inventory quantities
+            supplier_inventory.quantity_used += quantity_diff
+            supplier_inventory.quantity_remaining -= quantity_diff
+            
+            # Update variety stock
+            variety = db.query(ClothVariety).filter(
+                ClothVariety.id == sale.variety_id,
+                ClothVariety.tenant_id == tenant.id
+            ).first()
+            
+            if variety:
+                variety.current_stock -= quantity_diff
+                
+                # Log inventory movement
+                inventory_movement = InventoryMovement(
+                    tenant_id=tenant.id,
+                    variety_id=sale.variety_id,
+                    movement_type='sale_adjustment',
+                    quantity=-quantity_diff,
+                    reference_id=sale.id,
+                    reference_type='sale_updated',
+                    notes=f'Sale quantity adjusted by {float(quantity_diff)} (Sale ID: {sale.id})',
+                    movement_date=date.today(),
+                    stock_after=variety.current_stock
+                )
+                db.add(inventory_movement)
     
     db.commit()
     db.refresh(sale)

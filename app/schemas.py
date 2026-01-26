@@ -40,7 +40,7 @@ class SupplierInventoryBase(BaseModel):
     supplier_name: str = Field(..., min_length=1, max_length=100)
     variety_id: int
     quantity: float = Field(..., gt=0)
-    price_per_item: Decimal = Field(..., gt=0, decimal_places=2)
+    price_per_item: Decimal = Field(..., ge=0, decimal_places=2)
     supply_date: date
 
 class SupplierInventoryCreate(SupplierInventoryBase):
@@ -64,7 +64,7 @@ class SupplierReturnBase(BaseModel):
     supplier_name: str = Field(..., min_length=1, max_length=100)
     variety_id: int
     quantity: float = Field(..., gt=0)
-    price_per_item: Decimal = Field(..., gt=0, decimal_places=2)
+    price_per_item: Decimal = Field(..., ge=0, decimal_places=2)
     return_date: date
     reason: Optional[str] = None
 
@@ -135,7 +135,7 @@ class SaleBase(BaseModel):
     variety_name: Optional[str] = Field(None, min_length=1, max_length=100)
     quantity: float = Field(..., gt=0)
     selling_price: Decimal = Field(..., gt=0, decimal_places=2)
-    cost_price: Decimal = Field(..., gt=0, decimal_places=2)
+    cost_price: Decimal = Field(..., ge=0, decimal_places=2) 
     sale_date: date
     supplier_inventory_id: Optional[int] = None
     
@@ -169,6 +169,27 @@ class SaleBase(BaseModel):
 
 class SaleCreate(SaleBase):
     pass
+
+class SaleUpdate(BaseModel):
+    """Schema for updating sale - ALL fields optional"""
+    salesperson_name: Optional[str] = None
+    variety_id: Optional[int] = None
+    quantity: Optional[float] = None
+    selling_price: Optional[Decimal] = None
+    cost_price: Optional[Decimal] = None
+    profit: Optional[Decimal] = None
+    payment_status: Optional[PaymentStatus] = None
+    customer_name: Optional[str] = None
+    sale_date: Optional[date] = None
+    
+    @field_validator('customer_name')
+    @classmethod
+    def validate_customer_for_loan(cls, v, info):
+        payment_status = info.data.get('payment_status')
+        if payment_status == PaymentStatus.LOAN:
+            if not v or not v.strip():
+                raise ValueError('Customer name required for loan sales')
+        return v
 
 class SaleResponse(SaleBase):
     id: int

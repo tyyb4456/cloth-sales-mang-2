@@ -286,7 +286,7 @@ User command: "{request.transcript}"
         
         # Use structured output
         model = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             api_key=api_key,
             temperature=0.1
         )

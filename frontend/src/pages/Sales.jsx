@@ -1,6 +1,5 @@
-// frontend/src/pages/Sales.jsx - WITH COST UPDATE FILTER & EDIT FEATURE
-
-import { useState, useEffect, useRef } from 'react';
+// frontend/src/pages/Sales.jsx - WITH FULL EDIT FLEXIBILITY
+import { useState, useEffect } from 'react';
 import { Plus, Calendar, Trash2, Package, DollarSign, TrendingUp, AlertCircle, Edit2, Save, X } from 'lucide-react';
 import SalesForm from '../components/SaleForm';
 import api from '../api/api';
@@ -15,14 +14,13 @@ const getItemCount = (quantity, unit) => {
   return parseFloat(quantity);
 };
 
-// SKELETON SHIMMER COMPONENT
+// SKELETON COMPONENTS (kept same as before)
 const SkeletonShimmer = ({ className = "" }) => (
   <div className={`relative overflow-hidden bg-gray-200 dark:bg-gray-700 rounded ${className}`}>
     <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700" />
   </div>
 );
 
-// SKELETON STAT CARD
 function SkeletonStatCard() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm sm:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
@@ -35,7 +33,6 @@ function SkeletonStatCard() {
   );
 }
 
-// MOBILE CARD SKELETON
 function SkeletonMobileCard() {
   return (
     <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
@@ -46,7 +43,6 @@ function SkeletonMobileCard() {
         </div>
         <SkeletonShimmer className="w-8 h-8 rounded-lg ml-2" />
       </div>
-
       <div className="grid grid-cols-2 gap-2 text-sm mb-3">
         <div>
           <SkeletonShimmer className="h-3 w-16 mb-1" />
@@ -56,90 +52,42 @@ function SkeletonMobileCard() {
           <SkeletonShimmer className="h-3 w-20 mb-1" />
           <SkeletonShimmer className="h-5 w-24" />
         </div>
-        <div>
-          <SkeletonShimmer className="h-3 w-12 mb-1" />
-          <SkeletonShimmer className="h-5 w-16" />
-        </div>
-        <div>
-          <SkeletonShimmer className="h-3 w-14 mb-1" />
-          <SkeletonShimmer className="h-5 w-20" />
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <SkeletonShimmer className="h-6 w-16 rounded-full" />
       </div>
     </div>
   );
 }
 
-// DESKTOP TABLE SKELETON
 function SkeletonTableRow() {
   return (
     <tr className="border-t border-gray-200 dark:border-gray-700">
-      <td className="px-6 py-4">
-        <SkeletonShimmer className="h-5 w-28 sm:w-32" />
-      </td>
-      <td className="px-6 py-4">
-        <SkeletonShimmer className="h-5 w-32 sm:w-36" />
-        <SkeletonShimmer className="h-3 w-20 mt-1" />
-      </td>
-      <td className="px-6 py-4 text-center">
-        <SkeletonShimmer className="h-6 w-16 rounded-full mx-auto" />
-      </td>
-      <td className="px-6 py-4 text-center">
-        <SkeletonShimmer className="h-5 w-16 mx-auto" />
-      </td>
-      <td className="px-6 py-4 text-right">
-        <SkeletonShimmer className="h-5 w-24 ml-auto" />
-        <SkeletonShimmer className="h-3 w-20 mt-1 ml-auto" />
-      </td>
-      <td className="px-6 py-4 text-right">
-        <SkeletonShimmer className="h-5 w-20 ml-auto" />
-      </td>
-      <td className="px-6 py-4 text-center">
-        <SkeletonShimmer className="h-4 w-16 mx-auto" />
-      </td>
-      <td className="px-6 py-4 text-center">
-        <div className="flex items-center justify-center gap-2">
-          <SkeletonShimmer className="w-9 h-9 rounded-lg" />
-          <SkeletonShimmer className="w-9 h-9 rounded-lg" />
-        </div>
-      </td>
+      <td className="px-6 py-4"><SkeletonShimmer className="h-5 w-28 sm:w-32" /></td>
+      <td className="px-6 py-4"><SkeletonShimmer className="h-5 w-32 sm:w-36" /></td>
+      <td className="px-6 py-4 text-center"><SkeletonShimmer className="h-6 w-16 rounded-full mx-auto" /></td>
+      <td className="px-6 py-4 text-center"><SkeletonShimmer className="h-5 w-16 mx-auto" /></td>
+      <td className="px-6 py-4 text-right"><SkeletonShimmer className="h-5 w-24 ml-auto" /></td>
+      <td className="px-6 py-4 text-right"><SkeletonShimmer className="h-5 w-20 ml-auto" /></td>
+      <td className="px-6 py-4 text-center"><SkeletonShimmer className="h-4 w-16 mx-auto" /></td>
+      <td className="px-6 py-4 text-center"><div className="flex items-center justify-center gap-2"><SkeletonShimmer className="w-9 h-9 rounded-lg" /><SkeletonShimmer className="w-9 h-9 rounded-lg" /></div></td>
     </tr>
   );
 }
 
-// 🆕 EDIT COST MODAL
-function EditCostModal({ sale, onClose, onSave }) {
-  const [costPrice, setCostPrice] = useState(sale.cost_price || 0);
+// 🆕 FULL EDIT MODAL - Edit ALL fields
+function EditSaleModal({ sale, onClose, onSave, varieties }) {
+  const [formData, setFormData] = useState({
+    salesperson_name: sale.salesperson_name || '',
+    variety_id: sale.variety_id || '',
+    quantity: sale.quantity || '',
+    selling_price: sale.selling_price || '',
+    cost_price: sale.cost_price || '',
+    payment_status: sale.payment_status || 'paid',
+    customer_name: sale.customer_name || '',
+    sale_date: formatDate(sale.sale_date)
+  });
+  
   const [loading, setLoading] = useState(false);
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const quantity = parseFloat(sale.quantity);
-      const newCostPerUnit = parseFloat(costPrice);
-      const sellingPerUnit = parseFloat(sale.selling_price);
-      
-      const newTotalCost = newCostPerUnit * quantity;
-      const newTotalSelling = sellingPerUnit * quantity;
-      const newProfit = newTotalSelling - newTotalCost;
-
-      await api.put(`/sales/${sale.id}`, {
-        cost_price: newCostPerUnit,
-        profit: newProfit
-      });
-
-      onSave();
-      onClose();
-    } catch (error) {
-      console.error('Failed to update cost:', error);
-      alert('Failed to update cost price');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const selectedVariety = varieties.find(v => v.id === parseInt(formData.variety_id));
 
   const formatQuantityWithUnit = (quantity, unit) => {
     const qty = parseFloat(quantity);
@@ -149,74 +97,253 @@ function EditCostModal({ sale, onClose, onSave }) {
   };
 
   const calculateProfit = () => {
-    const qty = parseFloat(sale.quantity);
-    const newCost = parseFloat(costPrice) || 0;
-    const selling = parseFloat(sale.selling_price);
-    return ((selling - newCost) * qty).toFixed(2);
+    const qty = parseFloat(formData.quantity) || 0;
+    const cost = parseFloat(formData.cost_price) || 0;
+    const selling = parseFloat(formData.selling_price) || 0;
+    const totalCost = cost * qty;
+    const totalSelling = selling * qty;
+    return (totalSelling - totalCost).toFixed(2);
+  };
+
+  const handleSave = async () => {
+    if (!formData.salesperson_name || !formData.variety_id || !formData.quantity || !formData.selling_price) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    if (formData.payment_status === 'loan' && !formData.customer_name.trim()) {
+      alert('Customer name is required for loan sales');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const quantity = parseFloat(formData.quantity);
+      const costPerUnit = parseFloat(formData.cost_price) || 0;
+      const sellingPerUnit = parseFloat(formData.selling_price);
+      
+      const totalCost = costPerUnit * quantity;
+      const totalSelling = sellingPerUnit * quantity;
+      const totalProfit = totalSelling - totalCost;
+
+      await api.put(`/sales/${sale.id}`, {
+        salesperson_name: formData.salesperson_name,
+        variety_id: parseInt(formData.variety_id),
+        quantity: quantity,
+        selling_price: sellingPerUnit,
+        cost_price: costPerUnit,
+        profit: totalProfit,
+        payment_status: formData.payment_status,
+        customer_name: formData.payment_status === 'loan' ? formData.customer_name : null,
+        sale_date: formData.sale_date
+      });
+
+      onSave();
+      onClose();
+    } catch (error) {
+      console.error('Failed to update sale:', error);
+      alert(error.response?.data?.detail || 'Failed to update sale');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Update Cost Price</h3>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full my-8">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Edit Sale</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
           >
-            <X size={20} />
+            <X size={24} />
           </button>
         </div>
 
-        <div className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              <strong>{sale.variety.name}</strong> - {formatQuantityWithUnit(sale.quantity, sale.variety.measurement_unit)}
-            </p>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-              Selling Price: ₹{parseFloat(sale.selling_price).toFixed(2)} per unit
-            </p>
-          </div>
-
+        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          
+          {/* Salesperson Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Cost Price per Unit (₹)
+              Salesperson Name *
+            </label>
+            <input
+              type="text"
+              value={formData.salesperson_name}
+              onChange={(e) => setFormData({ ...formData, salesperson_name: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+              placeholder="Enter salesperson name"
+            />
+          </div>
+
+          {/* Variety */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Cloth Variety *
+            </label>
+            <select
+              value={formData.variety_id}
+              onChange={(e) => setFormData({ ...formData, variety_id: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+            >
+              <option value="">Select variety</option>
+              {varieties.map(v => (
+                <option key={v.id} value={v.id}>
+                  {v.name} ({v.measurement_unit})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Quantity */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Quantity ({selectedVariety?.measurement_unit || 'units'}) *
             </label>
             <input
               type="number"
               step="0.01"
-              min="0"
-              value={costPrice}
-              onChange={(e) => setCostPrice(e.target.value)}
+              min="0.01"
+              value={formData.quantity}
+              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
-              placeholder="Enter cost price"
-              autoFocus
+              placeholder="0"
             />
           </div>
 
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">New Profit</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-              ₹{calculateProfit()}
-            </p>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Cost Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Cost Price per Unit (₹)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.cost_price}
+                onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* Selling Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Selling Price per Unit (₹) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={formData.selling_price}
+                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+                placeholder="0.00"
+              />
+            </div>
           </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-            >
-              <Save size={18} />
-              {loading ? 'Saving...' : 'Save'}
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-            >
-              Cancel
-            </button>
+          {/* Payment Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Payment Status *
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="payment_status"
+                  value="paid"
+                  checked={formData.payment_status === 'paid'}
+                  onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
+                  className="mr-2"
+                />
+                <span className="text-gray-700 dark:text-gray-300">Paid</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="payment_status"
+                  value="loan"
+                  checked={formData.payment_status === 'loan'}
+                  onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
+                  className="mr-2"
+                />
+                <span className="text-gray-700 dark:text-gray-300">Loan</span>
+              </label>
+            </div>
           </div>
+
+          {/* Customer Name (for loans) */}
+          {formData.payment_status === 'loan' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Customer Name *
+              </label>
+              <input
+                type="text"
+                value={formData.customer_name}
+                onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+                placeholder="Enter customer name"
+              />
+            </div>
+          )}
+
+          {/* Sale Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Sale Date *
+            </label>
+            <input
+              type="date"
+              value={formData.sale_date}
+              onChange={(e) => setFormData({ ...formData, sale_date: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+            />
+          </div>
+
+          {/* Profit Preview */}
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Profit</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-1">
+                  ₹{calculateProfit()}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-600 dark:text-gray-400">Total Cost</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  ₹{((parseFloat(formData.cost_price) || 0) * (parseFloat(formData.quantity) || 0)).toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">Total Selling</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  ₹{((parseFloat(formData.selling_price) || 0) * (parseFloat(formData.quantity) || 0)).toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium"
+          >
+            <Save size={18} />
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
+          <button
+            onClick={onClose}
+            className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     </div>
@@ -230,7 +357,7 @@ export default function EnhancedSalesWithPriceSelector() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
-  const [filterMode, setFilterMode] = useState('all'); // 'all', 'cost_unknown'
+  const [filterMode, setFilterMode] = useState('all');
   const [editingSale, setEditingSale] = useState(null);
 
   useEffect(() => {
@@ -293,7 +420,6 @@ export default function EnhancedSalesWithPriceSelector() {
     }
   };
 
-  // 🆕 FILTER SALES
   const filteredSales = sales.filter(sale => {
     if (filterMode === 'cost_unknown') {
       return parseFloat(sale.cost_price) === 0;
@@ -347,7 +473,7 @@ export default function EnhancedSalesWithPriceSelector() {
           </div>
         </div>
 
-        {/* 🆕 FILTER TABS */}
+        {/* FILTER TABS */}
         {!loading && sales.length > 0 && (
           <div className="mb-4 sm:mb-6 flex flex-wrap gap-2">
             <button
@@ -389,10 +515,11 @@ export default function EnhancedSalesWithPriceSelector() {
           supplierInventories={supplierInventories}
         />
 
-        {/* Edit Cost Modal */}
+        {/* Edit Sale Modal */}
         {editingSale && (
-          <EditCostModal
+          <EditSaleModal
             sale={editingSale}
+            varieties={varieties}
             onClose={() => setEditingSale(null)}
             onSave={() => {
               loadSales();
@@ -519,15 +646,13 @@ export default function EnhancedSalesWithPriceSelector() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1 ml-2">
-                          {!hasCost && (
-                            <button
-                              onClick={() => setEditingSale(item)}
-                              className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition"
-                              title="Update cost"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setEditingSale(item)}
+                            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
+                            title="Edit sale"
+                          >
+                            <Edit2 size={16} />
+                          </button>
                           <button
                             onClick={() => handleDelete(item.id)}
                             className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
@@ -678,15 +803,13 @@ export default function EnhancedSalesWithPriceSelector() {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              {!hasCost && (
-                                <button
-                                  onClick={() => setEditingSale(item)}
-                                  className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors"
-                                  title="Update cost price"
-                                >
-                                  <Edit2 size={18} />
-                                </button>
-                              )}
+                              <button
+                                onClick={() => setEditingSale(item)}
+                                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                title="Edit sale"
+                              >
+                                <Edit2 size={18} />
+                              </button>
                               <button
                                 onClick={() => handleDelete(item.id)}
                                 className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"

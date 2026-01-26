@@ -179,7 +179,7 @@ export default function AIAgentPage() {
         {/* 📱 HEADER */}
         <div className="mb-4 sm:mb-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+            <div className="p-2 bg-linear-to-br from-blue-500 to-purple-600 rounded-xl">
               <Sparkles className="text-white w-6 h-6 sm:w-7 sm:h-7" />
             </div>
             <div>
@@ -280,13 +280,13 @@ export default function AIAgentPage() {
 
           {/* 📱 CHAT AREA */}
           <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col h-[600px] sm:h-[700px]">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col h-150 sm:h-175">
               
               {/* Chat Header */}
               <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                       <MessageSquare className="text-white w-5 h-5" />
                     </div>
                     <div>
@@ -324,11 +324,11 @@ export default function AIAgentPage() {
                     <div
                       className={`max-w-[85%] sm:max-w-2xl rounded-2xl px-4 py-3 ${
                         message.role === 'user'
-                          ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white'
+                          ? 'bg-linear-to-br from-blue-600 to-blue-700 text-white'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-600'
                       }`}
                     >
-                      <div className="whitespace-pre-wrap text-sm sm:text-base break-words">
+                      <div className="whitespace-pre-wrap text-sm sm:text-base wrap-break-word">
                         {message.text}
                       </div>
                       <div
@@ -378,7 +378,7 @@ export default function AIAgentPage() {
                     <button
                       onClick={() => sendMessage()}
                       disabled={loading || !input.trim()}
-                      className="absolute bottom-3 right-3 p-2 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="absolute bottom-3 right-3 p-2 bg-linear-to-br from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       {loading ? (
                         <Loader2 size={18} className="animate-spin" />
@@ -397,7 +397,7 @@ export default function AIAgentPage() {
                 </div>
 
                 <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>💡 Try: "How is my business doing?" or "Add a sale"</span>
+                  <span>Try: "How is my business doing?" or "Add a sale"</span>
                   <span className="hidden sm:block">Press Enter to send</span>
                 </div>
               </div>
