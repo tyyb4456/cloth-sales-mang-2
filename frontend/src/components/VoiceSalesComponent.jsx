@@ -7,7 +7,7 @@ import {
   Calendar, CreditCard, Wallet, ShoppingBag, Info, X, Plus
 } from 'lucide-react';
 import api from '../api/api';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 
 const formatDate = (date) => {
   const d = new Date(date);

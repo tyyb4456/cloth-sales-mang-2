@@ -1,4 +1,4 @@
-// frontend/src/components/Sidebar.jsx - UPDATED WITH RBAC
+// frontend/src/components/Sidebar.jsx - UPDATED WITH RBAC & PERSISTENT AUTH
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -26,19 +26,24 @@ import {
   UserPlus
 } from 'lucide-react';
 
-import { useAuth } from '../App';
+// ✅ UPDATED: Import from new AuthContext location
+import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  // ✅ UPDATED: Use logout from AuthContext (handles token cleanup)
   const { logout, user, tenant } = useAuth(); 
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      logout();
-      navigate('/');
+      // ✅ UPDATED: Use logout from context (clears localStorage & calls backend)
+      await logout();
     }
   };
 

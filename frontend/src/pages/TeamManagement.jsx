@@ -7,7 +7,7 @@ import {
   AlertCircle, Crown, X
 } from 'lucide-react';
 import api from '../api/api';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 
 export default function TeamManagement() {
   const { user } = useAuth();

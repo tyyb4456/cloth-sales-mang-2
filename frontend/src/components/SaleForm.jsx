@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, AlertTriangle, CheckCircle, Plus } from 'lucide-react';
 import api from '../api/api';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 
 const formatDate = (date) => {
   const d = new Date(date);

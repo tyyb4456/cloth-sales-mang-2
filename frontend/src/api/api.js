@@ -1,4 +1,4 @@
-// frontend/src/api/api.js
+// frontend/src/api/api.js - IMPROVED WITH AUTO TOKEN REFRESH
 import axios from 'axios';
 
 const API_BASE_URL = 'https://clothsmart-production-dc97.up.railway.app/';
@@ -9,11 +9,11 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': 'true',
-  
   },
   withCredentials: false, 
 });
-// REQUEST INTERCEPTOR - Add token to all requests
+
+// ✅ REQUEST INTERCEPTOR - Add token to all requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -27,16 +27,96 @@ api.interceptors.request.use(
   }
 );
 
-// RESPONSE INTERCEPTOR - Handle 401 errors
+// ✅ RESPONSE INTERCEPTOR - Handle 401 errors and auto-refresh
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid - redirect to login
-      console.error('Authentication failed - redirecting to login');
-      localStorage.clear();
-      window.location.href = '/';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // ✅ If 401 and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      
+      // ✅ If already refreshing, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(token => {
+            originalRequest.headers['Authorization'] = 'Bearer ' + token;
+            return api(originalRequest);
+          })
+          .catch(err => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem('refresh_token');
+      
+      if (!refreshToken) {
+        // No refresh token, force logout
+        localStorage.clear();
+        window.location.href = '/';
+        return Promise.reject(error);
+      }
+
+      try {
+        // ✅ Try to refresh the token
+        const response = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          { refresh_token: refreshToken },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        const { access_token, expires_in } = response.data;
+        
+        // ✅ Store new token
+        localStorage.setItem('access_token', access_token);
+        const expiryTime = new Date().getTime() + (expires_in * 1000);
+        localStorage.setItem('token_expiry', expiryTime.toString());
+        
+        // ✅ Update default header
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
+        originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
+        
+        // ✅ Process queued requests
+        processQueue(null, access_token);
+        
+        isRefreshing = false;
+        
+        // ✅ Retry original request
+        return api(originalRequest);
+        
+      } catch (refreshError) {
+        // ✅ Refresh failed, force logout
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        
+        console.error('Token refresh failed - redirecting to login');
+        localStorage.clear();
+        window.location.href = '/';
+        
+        return Promise.reject(refreshError);
+      }
     }
+
     return Promise.reject(error);
   }
 );
@@ -85,18 +165,5 @@ export const createExpense = (data) => api.post('/expenses/', data);
 export const deleteExpense = (id) => api.delete(`/expenses/${id}`);
 export const getExpenseSummary = (date) => api.get(`/expenses/summary/${date}`);
 export const getFinancialReport = (year, month) => api.get(`/expenses/financial-report/${year}/${month}`);
-
-// // WhatsApp endpoints
-// export const sendInvoiceWhatsApp = (saleId, customerPhone) => 
-//   api.post(`/whatsapp/send-invoice/${saleId}?customer_phone=${customerPhone}`);
-
-// export const sendPaymentReminder = (loanId) => 
-//   api.post(`/whatsapp/payment-reminder/${loanId}`);
-
-// export const sendDailySummary = () => 
-//   api.post('/whatsapp/daily-summary');
-
-// export const testWhatsApp = (phone) => 
-//   api.get(`/whatsapp/test?phone=${phone}`);
 
 export default api;
