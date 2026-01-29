@@ -6,109 +6,12 @@ import {
   Boxes, RotateCcw, CheckCircle, AlertCircle, Search
 } from 'lucide-react';
 import api from '../api/api';
+import { SkeletonStatCard, SkeletonDailyCard, SkeletonMonthlyCard, SkeletonSupplierCard } from '../components/skeleton/InventorySkeleton'
 
 const formatDate = (date) => {
   const d = new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-
-// ✨ SKELETON COMPONENTS
-const SkeletonStatCard = () => (
-  <div className="bg-linear-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-lg animate-pulse">
-    <div className="flex items-center justify-between mb-2">
-      <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-300 dark:bg-gray-600 rounded-lg"></div>
-    </div>
-    <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
-    <div className="h-8 sm:h-10 bg-gray-300 dark:bg-gray-600 rounded w-1/2 mb-2"></div>
-    <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded w-1/3"></div>
-  </div>
-);
-
-const SkeletonDailyCard = () => (
-  <div className="p-2 sm:p-3 border border-gray-200 dark:border-gray-700 rounded-lg animate-pulse">
-    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
-    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-2"></div>
-    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-  </div>
-);
-
-const SkeletonMonthlyCard = () => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 animate-pulse">
-    <div className="flex items-center justify-between mb-3">
-      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-    </div>
-    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-    <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
-    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
-  </div>
-);
-
-const SkeletonSupplierCard = () => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden animate-pulse">
-    <div className="bg-gray-100 dark:bg-gray-700 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-        <div className="flex-1">
-          <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-1/3 mb-2"></div>
-          <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
-        </div>
-        <div className="text-left sm:text-right">
-          <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-20 mb-2"></div>
-          <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
-        </div>
-      </div>
-    </div>
-
-    {/* Mobile Card View Skeleton */}
-    <div className="block lg:hidden divide-y divide-gray-200 dark:divide-gray-700">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="p-4">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-2"></div>
-              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            </div>
-            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg ml-2"></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2, 3, 4].map((j) => (
-              <div key={j}>
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-1"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-
-    {/* Desktop Table View Skeleton */}
-    <div className="hidden lg:block overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-gray-50 dark:bg-gray-700">
-          <tr>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-              <th key={i} className="px-4 py-3">
-                <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {[1, 2, 3].map((i) => (
-            <tr key={i} className="border-t border-gray-200 dark:border-gray-700">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((j) => (
-                <td key={j} className="px-4 py-3">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
 
 export default function EnhancedSupplierInventory() {
   const [varieties, setVarieties] = useState([]);
@@ -313,7 +216,7 @@ export default function EnhancedSupplierInventory() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
       <div className="max-w-7xl mx-auto">
 
-        {/* 📱 HEADER - Responsive */}
+        {/* HEADER - Responsive */}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
           <div>
             <h2 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 tracking-tight">
@@ -332,252 +235,7 @@ export default function EnhancedSupplierInventory() {
           </button>
         </div>
 
-        {/* 📱 OVERALL STATISTICS - With Skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
-          {initialLoading ? (
-            // Show skeleton cards during initial load
-            <>
-              <SkeletonStatCard />
-              <SkeletonStatCard />
-              <SkeletonStatCard />
-              <SkeletonStatCard />
-              <SkeletonStatCard />
-            </>
-          ) : (
-    <>
-  {/* TOTAL STOCK RECEIVED */}
-  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm">
-    <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
-      <Boxes className="w-6 h-6 sm:w-7 sm:h-7" />
-    </div>
-    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-      Total Stock Received
-    </p>
-    <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
-      {overallStats.totalQuantity.toFixed(1)}
-    </p>
-    <p className="text-xs text-slate-400 mt-1">All-time</p>
-  </div>
-
-  {/* STOCK USED */}
-  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm">
-    <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
-      <CheckCircle className="w-6 h-6 sm:w-7 sm:h-7" />
-    </div>
-    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-      Stock Used
-    </p>
-    <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
-      {overallStats.totalUsed.toFixed(1)}
-    </p>
-    <p className="text-xs text-slate-400 mt-1">
-      {overallStats.totalQuantity > 0
-        ? ((overallStats.totalUsed / overallStats.totalQuantity) * 100).toFixed(1)
-        : 0}% utilized
-    </p>
-  </div>
-
-  {/* STOCK RETURNED */}
-  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm">
-    <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
-      <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" />
-    </div>
-    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-      Stock Returned
-    </p>
-    <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
-      {overallStats.totalReturned.toFixed(1)}
-    </p>
-    <p className="text-xs text-slate-400 mt-1">
-      {overallStats.totalQuantity > 0
-        ? ((overallStats.totalReturned / overallStats.totalQuantity) * 100).toFixed(1)
-        : 0}% returned
-    </p>
-  </div>
-
-  {/* STOCK REMAINING */}
-  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm">
-    <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
-      <Package className="w-6 h-6 sm:w-7 sm:h-7" />
-    </div>
-    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-      Stock Remaining
-    </p>
-    <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
-      {overallStats.totalRemaining.toFixed(1)}
-    </p>
-    <p className="text-xs text-slate-400 mt-1">Available now</p>
-  </div>
-
-  {/* TOTAL VALUE */}
-  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm col-span-2 sm:col-span-1">
-    <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
-      <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7" />
-    </div>
-    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-      Total Value
-    </p>
-    <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
-      ₹{(overallStats.totalValue / 1000).toFixed(1)}K
-    </p>
-    <p className="text-xs text-slate-400 mt-1">Investment</p>
-  </div>
-</>
-
-          )}
-        </div>
-
-        {/* 📱 DAILY DETAILS - With Skeleton */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-4 sm:mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">Daily Stock Details</h3>
-            </div>
-            {!loading && <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{uniqueDates.length} days with activity</span>}
-          </div>
-
-          {loading ? (
-            // Skeleton for daily details
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
-              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <SkeletonDailyCard key={i} />
-              ))}
-            </div>
-          ) : uniqueDates.length === 0 ? (
-            <div className="text-center py-6 sm:py-8 text-gray-400 dark:text-gray-500">
-              <Calendar size={48} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No supplies recorded yet</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
-                {uniqueDates.slice(0, 14).map(date => {
-                  const dayData = inventory.filter(item => item.supply_date === date);
-                  const dayTotal = dayData.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
-
-                  return (
-                    <button
-                      key={date}
-                      onClick={() => showDailyDetailsModal(date)}
-                      className="p-2 sm:p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition text-left group"
-                    >
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                        {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </div>
-                      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {dayTotal.toFixed(0)} units
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {dayData.length} {dayData.length === 1 ? 'supply' : 'supplies'}
-                      </div>
-                      <div className="text-xs text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition mt-1 flex items-center gap-1">
-                        <Eye size={12} />
-                        View
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {uniqueDates.length > 14 && (
-                <div className="mt-3 text-center">
-                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                    Showing 14 of {uniqueDates.length} days
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* 📱 MONTH NAVIGATOR - Responsive */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4 sm:mb-6">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => changeMonth(-1)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-            >
-              <ChevronLeft size={20} />
-            </button>
-
-            <div className="text-center">
-              <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-gray-100 tracking-tight">
-                {monthNames[currentMonth]} {currentYear}
-              </h3>
-
-              {!isCurrentMonth && (
-                <button
-                  onClick={goToCurrentMonth}
-                  className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
-                >
-                  Go to current month
-                </button>
-              )}
-            </div>
-
-            <button
-              onClick={() => changeMonth(1)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        </div>
-
-        {/* 📱 MONTHLY SUMMARY - With Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
-          {loading ? (
-            <>
-              <SkeletonMonthlyCard />
-              <SkeletonMonthlyCard />
-              <SkeletonMonthlyCard />
-            </>
-          ) : (
-            <>
-              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <Package className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
-                  </div>
-                </div>
-                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Total Supplies This Month</p>
-                <h3 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 mt-1">
-                  {inventory.length}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">deliveries</p>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
-                  </div>
-                </div>
-                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Investment</p>
-                <h3 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 mt-1">
-                  ₹{(totalAmount / 1000).toFixed(1)}K
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">spent on supplies</p>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
-                  </div>
-                </div>
-                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Active Suppliers</p>
-                <h3 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 mt-1">
-                  {Object.keys(groupedBySupplier).length}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">this month</p>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* 📱 SUPPLY FORM - Responsive Modal */}
+        {/* SUPPLY FORM - Responsive Modal */}
         {showForm && (
           <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-4 sm:mb-6">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 sm:mb-6">
@@ -650,7 +308,7 @@ export default function EnhancedSupplierInventory() {
                   </label>
                   <input
                     type="number"
-                    min="0.01"
+                    min="0"
                     step={selectedVariety?.measurement_unit !== 'pieces' ? '0.01' : '1'}
                     value={formData.quantity}
                     onChange={(e) =>
@@ -728,7 +386,252 @@ export default function EnhancedSupplierInventory() {
           </div>
         )}
 
-        {/* 📱 MONTHLY INVENTORY LIST - With Skeleton */}
+        {/* 📱 OVERALL STATISTICS - With Skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          {initialLoading ? (
+            // Show skeleton cards during initial load
+            <>
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+            </>
+          ) : (
+            <>
+              {/* TOTAL STOCK RECEIVED */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
+                  <Boxes className="w-6 h-6 sm:w-7 sm:h-7" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  Total Stock Received
+                </p>
+                <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
+                  {overallStats.totalQuantity.toFixed(1)}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">All-time</p>
+              </div>
+
+              {/* STOCK USED */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
+                  <CheckCircle className="w-6 h-6 sm:w-7 sm:h-7" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  Stock Used
+                </p>
+                <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
+                  {overallStats.totalUsed.toFixed(1)}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {overallStats.totalQuantity > 0
+                    ? ((overallStats.totalUsed / overallStats.totalQuantity) * 100).toFixed(1)
+                    : 0}% utilized
+                </p>
+              </div>
+
+              {/* STOCK RETURNED */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
+                  <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  Stock Returned
+                </p>
+                <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
+                  {overallStats.totalReturned.toFixed(1)}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {overallStats.totalQuantity > 0
+                    ? ((overallStats.totalReturned / overallStats.totalQuantity) * 100).toFixed(1)
+                    : 0}% returned
+                </p>
+              </div>
+
+              {/* STOCK REMAINING */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
+                  <Package className="w-6 h-6 sm:w-7 sm:h-7" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  Stock Remaining
+                </p>
+                <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
+                  {overallStats.totalRemaining.toFixed(1)}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">Available now</p>
+              </div>
+
+              {/* TOTAL VALUE */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm col-span-2 sm:col-span-1">
+                <div className="flex items-center justify-between mb-2 text-slate-500 dark:text-slate-400">
+                  <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  Total Value
+                </p>
+                <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
+                  ₹{(overallStats.totalValue / 1000).toFixed(1)}K
+                </p>
+                <p className="text-xs text-slate-400 mt-1">Investment</p>
+              </div>
+            </>
+
+          )}
+        </div>
+
+        {/* 📱 DAILY DETAILS - With Skeleton */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-4 sm:mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">Daily Stock Details</h3>
+            </div>
+            {!loading && <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{uniqueDates.length} days with activity</span>}
+          </div>
+
+          {loading ? (
+            // Skeleton for daily details
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <SkeletonDailyCard key={i} />
+              ))}
+            </div>
+          ) : uniqueDates.length === 0 ? (
+            <div className="text-center py-6 sm:py-8 text-gray-400 dark:text-gray-500">
+              <Calendar size={48} className="mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No supplies recorded yet</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                {uniqueDates.slice(0, 14).map(date => {
+                  const dayData = inventory.filter(item => item.supply_date === date);
+                  const dayTotal = dayData.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
+
+                  return (
+                    <button
+                      key={date}
+                      onClick={() => showDailyDetailsModal(date)}
+                      className="p-2 sm:p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition text-left group"
+                    >
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                        {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {dayTotal.toFixed(0)} units
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {dayData.length} {dayData.length === 1 ? 'supply' : 'supplies'}
+                      </div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition mt-1 flex items-center gap-1">
+                        <Eye size={12} />
+                        View
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {uniqueDates.length > 14 && (
+                <div className="mt-3 text-center">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    Showing 14 of {uniqueDates.length} days
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* MONTH NAVIGATOR - Responsive */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4 sm:mb-6">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => changeMonth(-1)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            <div className="text-center">
+              <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-gray-100 tracking-tight">
+                {monthNames[currentMonth]} {currentYear}
+              </h3>
+
+              {!isCurrentMonth && (
+                <button
+                  onClick={goToCurrentMonth}
+                  className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
+                >
+                  Go to current month
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => changeMonth(1)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* MONTHLY SUMMARY - With Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+          {loading ? (
+            <>
+              <SkeletonMonthlyCard />
+              <SkeletonMonthlyCard />
+              <SkeletonMonthlyCard />
+            </>
+          ) : (
+            <>
+              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <Package className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
+                  </div>
+                </div>
+                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Total Supplies This Month</p>
+                <h3 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 mt-1">
+                  {inventory.length}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">deliveries</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
+                  </div>
+                </div>
+                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Investment</p>
+                <h3 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 mt-1">
+                  ₹{(totalAmount / 1000).toFixed(1)}K
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">spent on supplies</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
+                  </div>
+                </div>
+                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Active Suppliers</p>
+                <h3 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 mt-1">
+                  {Object.keys(groupedBySupplier).length}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">this month</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* MONTHLY INVENTORY LIST - With Skeleton */}
         <div className="space-y-4 sm:space-y-6">
           {loading ? (
             // Skeleton for supplier cards
@@ -831,7 +734,7 @@ export default function EnhancedSupplierInventory() {
                     ))}
                   </div>
 
-                  {/* 🖥️ Desktop: Table View */}
+                  {/* Desktop: Table View */}
                   <div className="hidden lg:block overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs">
@@ -984,8 +887,8 @@ export default function EnhancedSupplierInventory() {
                           Price/Unit: <span className="font-semibold text-gray-900 dark:text-gray-100">₹{parseFloat(item.price_per_item).toFixed(2)}</span>
                         </span>
                         <span className={`px-2 py-1 rounded text-xs font-medium self-start sm:self-auto ${parseFloat(item.quantity_remaining) > 0
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                           }`}>
                           {parseFloat(item.quantity_remaining) > 0 ? 'In Stock' : 'Fully Used'}
                         </span>
