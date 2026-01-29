@@ -11,7 +11,8 @@ import {
   Calendar, ArrowUp, ArrowDown, Activity, RefreshCw 
 } from 'lucide-react';
 import api from '../api/api';
-import {SkeletonLoader} from '../components/skeleton/FinancialSkeleton'
+
+import { SkeletonFinancial } from '../components/skeleton/UnifiedSkeleton'
 
 const FinancialDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -180,7 +181,7 @@ const FinancialDashboard = () => {
 
   // Show skeleton loader while loading
   if (loading) {
-    return <SkeletonLoader />;
+    return <SkeletonFinancial />;
   }
 
   return (

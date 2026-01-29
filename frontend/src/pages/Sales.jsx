@@ -5,7 +5,7 @@ import SalesForm from '../components/SaleForm';
 import api from '../api/api';
 
 import { EditSaleModal } from '../components/core/SaleFunc'
-import {SkeletonStatCard, SkeletonMobileCard, SkeletonTableRow} from '../components/skeleton/SaleSkeleton'
+import {SkeletonStatCard, SkeletonMobileCard, SkeletonTableRow} from '../components/skeleton/UnifiedSkeleton'
 
 const formatDate = (date) => {
   const d = new Date(date);

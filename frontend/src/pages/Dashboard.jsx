@@ -1,9 +1,10 @@
-// frontend/src/pages/Dashboard.jsx - WITH MODERN SKELETON LOADING UI
+// frontend/src/pages/Dashboard.jsx - WITH UNIFIED SKELETON SYSTEM
 import { useState, useEffect } from 'react';
 import { TrendingUp, Package, ShoppingCart } from 'lucide-react';
 import api from '../api/api';
 
-import { SkeletonStatCard, SkeletonSummaryCard, StatCard} from '../components/skeleton/Dashboardskeleton'
+// NEW: Single import from unified skeleton
+import { SkeletonStatCard , StatCard} from '../components/skeleton/UnifiedSkeleton'
 
 // Helper to format date
 const formatDate = (date) => {
@@ -112,12 +113,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* LOADING SKELETONS */}
+      {/* ✅ UPDATED: Simplified skeleton loading */}
       {loading ? (
         <>
           {/* Sales Summary Skeletons */}
           <div className="mb-4 sm:mb-6">
-            <SkeletonShimmer className="h-6 sm:h-7 w-32 sm:w-40 mb-3 sm:mb-4" />
+            <div className="h-6 sm:h-7 w-32 sm:w-40 mb-3 sm:mb-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
               <SkeletonStatCard />
               <SkeletonStatCard />
@@ -125,9 +126,15 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Summary Cards Skeleton */}
+          {/* Summary Card Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-            <SkeletonSummaryCard />
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 animate-pulse">
+              <div className="h-5 sm:h-6 bg-gray-200 dark:bg-gray-700 rounded w-40 mb-4" />
+              <div className="space-y-3">
+                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+              </div>
+            </div>
           </div>
         </>
       ) : (

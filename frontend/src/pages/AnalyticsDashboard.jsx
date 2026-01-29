@@ -1,12 +1,12 @@
-// frontend/src/pages/AnalyticsDashboard.jsx - WITH MODERN SKELETON LOADING UI
+// frontend/src/pages/AnalyticsDashboard.jsx - WITH UNIFIED SKELETON SYSTEM
 import { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Award, AlertCircle, Users, Calendar } from 'lucide-react';
 import InventoryAnalyticsDashboard from '../components/InventoryAnalyticsDashboard';
-import { SkeletonKPICard, SkeletonChart, SkeletonTable } from '../components/skeleton/AnalyticsSkeleton';
+
 import { fetchAnalyticsByDateRange, KPICard } from '../components/core/AnalyticsFunction'
 
-
+import { SkeletonStatCard, SkeletonChart, SkeletonTable, SkeletonPieChart } from '../components/skeleton/UnifiedSkeleton';
 
 const getDateRange = (days) => {
   const end = new Date();
@@ -168,30 +168,36 @@ const AnalyticsDashboard = () => {
 
         {loading ? (
           <>
-            {/* KPI CARDS SKELETON */}
+            {/* KPI CARDS SKELETON - Using Unified Skeleton */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-              <SkeletonKPICard />
-              <SkeletonKPICard />
-              <SkeletonKPICard />
-              <SkeletonKPICard />
+              <SkeletonStatCard showTrend />
+              <SkeletonStatCard showTrend />
+              <SkeletonStatCard showTrend />
+              <SkeletonStatCard showTrend />
             </div>
 
             {/* SALES TREND CHART SKELETON */}
-            <SkeletonChart />
+            <SkeletonChart height={300} showTitle showLegend />
 
+            {/* TOP PRODUCTS TABLE SKELETON */}
             <div className="mt-6 sm:mt-8">
-              <SkeletonTable />
+              <SkeletonTable rows={5} columns={6} />
             </div>
 
             {/* PRODUCT MIX CHARTS SKELETON */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mt-6 sm:mt-8">
-              <SkeletonChart height={250} />
-              <SkeletonChart height={250} />
+              <SkeletonPieChart showTitle />
+              <SkeletonChart height={250} showTitle />
             </div>
 
             {/* SALESPERSON TABLE SKELETON */}
             <div className="mt-6 sm:mt-8">
-              <SkeletonTable />
+              <SkeletonTable rows={5} columns={7} />
+            </div>
+
+            {/* SUPPLIER TABLE SKELETON */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mt-6 sm:mt-8">
+              <SkeletonTable rows={4} columns={3} />
             </div>
           </>
         ) : analytics && (

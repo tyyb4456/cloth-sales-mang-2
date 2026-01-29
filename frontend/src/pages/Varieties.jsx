@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, X, Save, Package } from 'lucide-react';
 import api from '../api/api';
 
-import { SkeletonMobileCard , SkeletonTableRow } from '../components/skeleton/VarietySkeleton'
+import { SkeletonMobileCard , SkeletonTableRow } from '../components/skeleton/UnifiedSkeleton'
 
 export default function Varieties() {
   const [varieties, setVarieties] = useState([]);

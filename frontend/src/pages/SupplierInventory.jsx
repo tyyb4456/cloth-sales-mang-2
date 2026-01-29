@@ -1,4 +1,4 @@
-// frontend/src/pages/SupplierInventory.jsx - WITH SKELETON LOADING UI
+// frontend/src/pages/SupplierInventory.jsx - WITH UNIFIED SKELETON SYSTEM
 import { useState, useEffect } from 'react';
 import {
   Plus, Calendar, Trash2, TrendingUp, Package,
@@ -6,7 +6,8 @@ import {
   Boxes, RotateCcw, CheckCircle, AlertCircle, Search
 } from 'lucide-react';
 import api from '../api/api';
-import { SkeletonStatCard, SkeletonDailyCard, SkeletonMonthlyCard, SkeletonSupplierCard } from '../components/skeleton/InventorySkeleton'
+
+import { SkeletonStatCard, SkeletonDailyCard, SkeletonGroupCard } from '../components/skeleton/UnifiedSkeleton'
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -386,7 +387,7 @@ export default function EnhancedSupplierInventory() {
           </div>
         )}
 
-        {/* 📱 OVERALL STATISTICS - With Skeleton */}
+        {/* 📱 OVERALL STATISTICS - With Unified Skeleton */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {initialLoading ? (
             // Show skeleton cards during initial load
@@ -481,7 +482,7 @@ export default function EnhancedSupplierInventory() {
           )}
         </div>
 
-        {/* 📱 DAILY DETAILS - With Skeleton */}
+        {/* 📱 DAILY DETAILS - With Unified Skeleton */}
         <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-4 sm:mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -492,7 +493,7 @@ export default function EnhancedSupplierInventory() {
           </div>
 
           {loading ? (
-            // Skeleton for daily details
+            // Unified Skeleton for daily details
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
               {[1, 2, 3, 4, 5, 6, 7].map((i) => (
                 <SkeletonDailyCard key={i} />
@@ -579,13 +580,13 @@ export default function EnhancedSupplierInventory() {
           </div>
         </div>
 
-        {/* MONTHLY SUMMARY - With Skeleton */}
+        {/* MONTHLY SUMMARY - With Unified Skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
           {loading ? (
             <>
-              <SkeletonMonthlyCard />
-              <SkeletonMonthlyCard />
-              <SkeletonMonthlyCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
             </>
           ) : (
             <>
@@ -631,13 +632,13 @@ export default function EnhancedSupplierInventory() {
           )}
         </div>
 
-        {/* MONTHLY INVENTORY LIST - With Skeleton */}
+        {/* MONTHLY INVENTORY LIST - With Unified Skeleton */}
         <div className="space-y-4 sm:space-y-6">
           {loading ? (
-            // Skeleton for supplier cards
+            // Unified Skeleton for supplier/group cards
             <>
-              <SkeletonSupplierCard />
-              <SkeletonSupplierCard />
+              <SkeletonGroupCard rows={3} />
+              <SkeletonGroupCard rows={3} />
             </>
           ) : inventory.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">

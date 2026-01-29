@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, TrendingDown, RotateCcw, ChevronLeft, ChevronRight, AlertCircle, X, Sun, Moon } from 'lucide-react';
 import api from '../api/api';
 
-import { SkeletonCard, SkeletonReturnCard, SkeletonReturnGroup, SkeletonLoader } from '../components/skeleton/ReturnSkeleton'
+import { SkeletonStatCard, SkeletonGroupCard } from '../components/skeleton/UnifiedSkeleton'
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -39,6 +39,7 @@ export default function MonthlySupplierReturns() {
   const [varieties, setVarieties] = useState([]);
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -84,8 +85,10 @@ export default function MonthlySupplierReturns() {
     try {
       const response = await api.get('/supplier/inventory');
       setSupplierInventories(Array.isArray(response.data) ? response.data : []);
+      setInitialLoading(false);
     } catch (error) {
       console.error('Error loading supplier inventories:', error);
+      setInitialLoading(false);
     }
   };
 
@@ -246,10 +249,6 @@ export default function MonthlySupplierReturns() {
 
   const isCurrentMonth = currentMonth === new Date().getMonth() && 
                          currentYear === new Date().getFullYear();
-
-  if (loading && returns.length === 0) {
-    return <SkeletonLoader />;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 md:p-6 transition-colors">
@@ -419,62 +418,70 @@ export default function MonthlySupplierReturns() {
           </div>
         </div>
 
-        {/* SUMMARY CARDS */}
+        {/* SUMMARY CARDS - With Unified Skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="flex-1">
-                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-gray-400">Total Returns</p>
-                <h3 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-gray-100 mt-1">
-                  {returns.length}
-                </h3>
+          {initialLoading ? (
+            <>
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+            </>
+          ) : (
+            <>
+              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-gray-700 shadow-sm">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-gray-400">Total Returns</p>
+                    <h3 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-gray-100 mt-1">
+                      {returns.length}
+                    </h3>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-slate-100 dark:bg-gray-700 rounded-lg">
+                    <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-gray-300" />
+                  </div>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400">returns this month</p>
               </div>
-              <div className="p-2 sm:p-3 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-gray-300" />
-              </div>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400">returns this month</p>
-          </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="flex-1">
-                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-gray-400">Return Value</p>
-                <h3 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-gray-100 mt-1">
-                  ₹{(totalAmount / 1000).toFixed(1)}K
-                </h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-gray-700 shadow-sm">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-gray-400">Return Value</p>
+                    <h3 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-gray-100 mt-1">
+                      ₹{(totalAmount / 1000).toFixed(1)}K
+                    </h3>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-slate-100 dark:bg-gray-700 rounded-lg">
+                    <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-gray-300" />
+                  </div>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400">refunded to suppliers</p>
               </div>
-              <div className="p-2 sm:p-3 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-gray-300" />
-              </div>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400">refunded to suppliers</p>
-          </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-gray-700 shadow-sm sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="flex-1">
-                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-gray-400">Suppliers</p>
-                <h3 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-gray-100 mt-1">
-                  {Object.keys(groupedBySupplier).length}
-                </h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-gray-700 shadow-sm sm:col-span-2 lg:col-span-1">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className="flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-gray-400">Suppliers</p>
+                    <h3 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-gray-100 mt-1">
+                      {Object.keys(groupedBySupplier).length}
+                    </h3>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-slate-100 dark:bg-gray-700 rounded-lg">
+                    <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-gray-300" />
+                  </div>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400">with returns</p>
               </div>
-              <div className="p-2 sm:p-3 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-gray-300" />
-              </div>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400">with returns</p>
-          </div>
+            </>
+          )}
         </div>
 
-
-
-        {/* RETURNS LIST */}
+        {/* RETURNS LIST - With Unified Skeleton */}
         <div className="space-y-4 sm:space-y-6">
           {loading ? (
             <div className="space-y-4 sm:space-y-6">
-              <SkeletonReturnGroup />
-              <SkeletonReturnGroup />
+              <SkeletonGroupCard rows={3} />
+              <SkeletonGroupCard rows={3} />
             </div>
           ) : returns.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
