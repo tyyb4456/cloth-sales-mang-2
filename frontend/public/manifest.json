@@ -4,13 +4,13 @@
   "description": "Inventory and sales management for cloth shops",
   "icons": [
     {
-      "src": "/unnamed.jpg",
+      "src": "/ShopSmart.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "/ShopSmart.png",
+      "src": "/unnamed.jpg",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
