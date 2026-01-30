@@ -1,0 +1,39 @@
+{
+  "short_name": "ShopSmart",
+  "name": "ShopSmart - Cloth Shop Management",
+  "description": "Inventory and sales management for cloth shops",
+  "icons": [
+    {
+      "src": "/unnamed.jpg",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/ShopSmart.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1f2937",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "type": "image/png",
+      "sizes": "390x844",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot-desktop.png",
+      "type": "image/png",
+      "sizes": "1920x1080",
+      "form_factor": "wide"
+    }
+  ]
+}
