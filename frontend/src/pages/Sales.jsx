@@ -26,7 +26,7 @@ const GlassCard = ({ children, className = "", delay = 0 }) => (
     transition={{ duration: 0.5, delay }}
     className={`relative backdrop-blur-xl bg-white/10 dark:bg-gray-900/30 rounded-2xl border border-white/20 dark:border-gray-700/50 shadow-2xl ${className}`}
   >
-    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-2xl" />
+    <div className="absolute inset-0 bg-linear-to-br from-blue-500/5 to-purple-500/5 rounded-2xl" />
     <div className="relative">{children}</div>
   </motion.div>
 );
@@ -40,18 +40,18 @@ const StatCard = ({ icon: Icon, title, value, subtitle, color, delay }) => (
     whileHover={{ scale: 1.02, y: -5 }}
     className="group"
   >
-    <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 rounded-2xl border border-white/20 dark:border-gray-700/50 shadow-2xl overflow-hidden">
+    <div className="relative backdrop-blur-xl bg-linear-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 rounded-2xl border border-white/20 dark:border-gray-700/50 shadow-2xl overflow-hidden">
       {/* Animated gradient background */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+      <div className={`absolute inset-0 bg-linear-to-br ${color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
       
       {/* Glow effect on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-        <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${color}`} />
+        <div className={`absolute top-0 left-0 w-full h-1 bg-linear-to-r ${color}`} />
       </div>
 
       <div className="relative p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className={`p-3 rounded-xl bg-gradient-to-br ${color} shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
+          <div className={`p-3 rounded-xl bg-linear-to-br ${color} shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
             <Icon className="w-6 h-6 text-white" />
           </div>
         </div>
@@ -165,7 +165,7 @@ export default function ModernSalesWithProgressiveDisclosure() {
   }, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900/20 to-purple-900/20 dark:from-gray-950 dark:via-blue-950/30 dark:to-purple-950/30">
+    <div className="min-h-screen bg-linear-to-br from-gray-900 via-blue-900/20 to-purple-900/20 dark:from-gray-950 dark:via-blue-950/30 dark:to-purple-950/30">
       {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-48 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
@@ -183,7 +183,7 @@ export default function ModernSalesWithProgressiveDisclosure() {
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+              <h1 className="text-4xl sm:text-5xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
                 Sales Dashboard
               </h1>
               <p className="text-gray-400 dark:text-gray-500">
@@ -210,7 +210,7 @@ export default function ModernSalesWithProgressiveDisclosure() {
                 onClick={() => setShowForm(!showForm)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="relative group px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-lg overflow-hidden"
+                className="relative group px-6 py-3 rounded-xl bg-linear-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-lg overflow-hidden"
               >
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                 <div className="relative flex items-center justify-center gap-2">
@@ -236,7 +236,7 @@ export default function ModernSalesWithProgressiveDisclosure() {
               whileTap={{ scale: 0.95 }}
               className={`px-6 py-2.5 rounded-xl font-medium transition-all ${
                 filterMode === 'all'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                  ? 'bg-linear-to-r from-blue-500 to-purple-500 text-white shadow-lg'
                   : 'backdrop-blur-xl bg-white/10 text-gray-300 border border-white/20 hover:bg-white/20'
               }`}
             >
@@ -250,7 +250,7 @@ export default function ModernSalesWithProgressiveDisclosure() {
                 whileTap={{ scale: 0.95 }}
                 className={`px-6 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 ${
                   filterMode === 'cost_unknown'
-                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                    ? 'bg-linear-to-r from-orange-500 to-red-500 text-white shadow-lg'
                     : 'backdrop-blur-xl bg-white/10 text-gray-300 border border-white/20 hover:bg-white/20'
                 }`}
               >
@@ -334,9 +334,9 @@ export default function ModernSalesWithProgressiveDisclosure() {
               onClick={() => setShowRecords(!showRecords)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="group relative px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-xl border border-white/20 text-white font-semibold shadow-2xl overflow-hidden"
+              className="group relative px-8 py-4 rounded-2xl bg-linear-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-xl border border-white/20 text-white font-semibold shadow-2xl overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
               <div className="relative flex items-center gap-3">
                 <Eye size={20} />
                 <span>{showRecords ? 'Hide' : 'View'} Sales Records</span>
@@ -597,7 +597,7 @@ export default function ModernSalesWithProgressiveDisclosure() {
             transition={{ duration: 0.5 }}
           >
             <GlassCard className="text-center py-16">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-20 h-20 bg-linear-to-br from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Package className="text-gray-400" size={40} />
               </div>
               <p className="text-white font-semibold text-lg mb-2">

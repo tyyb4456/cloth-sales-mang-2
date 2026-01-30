@@ -23,7 +23,7 @@ const GlassCard = ({ children, className = "", delay = 0 }) => (
     transition={{ duration: 0.5, delay }}
     className={`relative backdrop-blur-xl bg-white/10 dark:bg-gray-900/30 rounded-2xl border border-white/20 dark:border-gray-700/50 shadow-2xl ${className}`}
   >
-    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-2xl" />
+    <div className="absolute inset-0 bg-linear-to-br from-blue-500/5 to-purple-500/5 rounded-2xl" />
     <div className="relative">{children}</div>
   </motion.div>
 );
@@ -37,15 +37,15 @@ const StatCard = ({ icon: Icon, title, value, subtitle, color, delay }) => (
     whileHover={{ scale: 1.02, y: -5 }}
     className="group"
   >
-    <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 rounded-2xl border border-white/20 dark:border-gray-700/50 shadow-2xl overflow-hidden">
-      <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+    <div className="relative backdrop-blur-xl bg-linear-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 rounded-2xl border border-white/20 dark:border-gray-700/50 shadow-2xl overflow-hidden">
+      <div className={`absolute inset-0 bg-linear-to-br ${color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-        <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${color}`} />
+        <div className={`absolute top-0 left-0 w-full h-1 bg-linear-to-r ${color}`} />
       </div>
 
       <div className="relative p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className={`p-3 rounded-xl bg-gradient-to-br ${color} shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
+          <div className={`p-3 rounded-xl bg-linear-to-br ${color} shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
             <Icon className="w-6 h-6 text-white" />
           </div>
         </div>
@@ -83,7 +83,7 @@ const DailyCard = ({ date, dayData, onClick }) => {
       whileTap={{ scale: 0.95 }}
       className="group relative backdrop-blur-xl bg-white/10 dark:bg-gray-900/30 rounded-xl border border-white/20 dark:border-gray-700/50 p-3 text-left overflow-hidden shadow-lg hover:shadow-2xl transition-all"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="absolute inset-0 bg-linear-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
       <div className="relative">
         <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">
@@ -305,7 +305,7 @@ export default function ModernSupplierInventory() {
   const dailyQuantity = dailyInventory.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900/20 to-purple-900/20 dark:from-gray-950 dark:via-blue-950/30 dark:to-purple-950/30">
+    <div className="min-h-screen bg-linear-to-br from-gray-900 via-blue-900/20 to-purple-900/20 dark:from-gray-950 dark:via-blue-950/30 dark:to-purple-950/30">
       {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-48 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
@@ -323,7 +323,7 @@ export default function ModernSupplierInventory() {
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
             <div>
-              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+              <h1 className="text-4xl sm:text-5xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
                 Supplier Inventory
               </h1>
               <p className="text-gray-400 dark:text-gray-500">
@@ -335,7 +335,7 @@ export default function ModernSupplierInventory() {
               onClick={() => setShowForm(!showForm)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="relative group px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-lg overflow-hidden"
+              className="relative group px-6 py-3 rounded-xl bg-linear-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-lg overflow-hidden"
             >
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
               <div className="relative flex items-center justify-center gap-2">
@@ -476,7 +476,7 @@ export default function ModernSupplierInventory() {
                       <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="sm:col-span-2 p-4 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg border border-white/20"
+                        className="sm:col-span-2 p-4 bg-linear-to-r from-blue-500/20 to-purple-500/20 rounded-lg border border-white/20"
                       >
                         <div className="flex justify-between items-center">
                           <div>
@@ -495,7 +495,7 @@ export default function ModernSupplierInventory() {
                         type="submit"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium shadow-lg"
+                        className="flex-1 px-6 py-3 rounded-lg bg-linear-to-r from-blue-500 to-purple-500 text-white font-medium shadow-lg"
                       >
                         Add Supply & Update Stock
                       </motion.button>
@@ -641,7 +641,7 @@ export default function ModernSupplierInventory() {
             </motion.button>
 
             <div className="text-center">
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <h3 className="text-2xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 {monthNames[currentMonth]} {currentYear}
               </h3>
               {!isCurrentMonth && (
@@ -716,9 +716,9 @@ export default function ModernSupplierInventory() {
               onClick={() => setShowMonthlyInventory(!showMonthlyInventory)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="group relative px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-xl border border-white/20 text-white font-semibold shadow-2xl overflow-hidden"
+              className="group relative px-8 py-4 rounded-2xl bg-linear-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-xl border border-white/20 text-white font-semibold shadow-2xl overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
               <div className="relative flex items-center gap-3">
                 <Eye size={20} />
                 <span>{showMonthlyInventory ? 'Hide' : 'View'} Monthly Inventory</span>
@@ -754,7 +754,7 @@ export default function ModernSupplierInventory() {
                     transition={{ delay: index * 0.1 }}
                   >
                     <GlassCard className="overflow-hidden">
-                      <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 px-6 py-4 border-b border-white/10">
+                      <div className="bg-linear-to-r from-blue-500/20 to-purple-500/20 px-6 py-4 border-b border-white/10">
                         <div className="flex justify-between items-center">
                           <div>
                             <h3 className="text-lg font-bold text-white">{supplier}</h3>
@@ -927,7 +927,7 @@ export default function ModernSupplierInventory() {
             transition={{ duration: 0.5 }}
           >
             <GlassCard className="text-center py-16">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-20 h-20 bg-linear-to-br from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Package className="text-gray-400" size={40} />
               </div>
               <h3 className="text-white font-semibold text-lg mb-2">No supplies for this month</h3>
@@ -951,10 +951,10 @@ export default function ModernSupplierInventory() {
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.9, y: 20 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-gradient-to-br from-gray-900/95 to-blue-900/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-white/20"
+                className="bg-linear-to-br from-gray-900/95 to-blue-900/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-white/20"
               >
                 {/* Modal Header */}
-                <div className="bg-gradient-to-r from-blue-500/30 to-purple-500/30 px-6 py-5 border-b border-white/10">
+                <div className="bg-linear-to-r from-blue-500/30 to-purple-500/30 px-6 py-5 border-b border-white/10">
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="text-2xl font-bold text-white">Daily Stock Details</h3>
@@ -1061,7 +1061,7 @@ export default function ModernSupplierInventory() {
                     onClick={() => setShowDailyDetails(false)}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium"
+                    className="w-full px-4 py-3 bg-linear-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium"
                   >
                     Close
                   </motion.button>
