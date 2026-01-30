@@ -5,8 +5,8 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/unnamed.jpg',
-  '/ShopSmart.png'
+  '/logo1.png',
+  '/logo2.png'
 ];
 
 // Install event - cache static assets

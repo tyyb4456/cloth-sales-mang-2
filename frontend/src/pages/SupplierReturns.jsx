@@ -1,46 +1,80 @@
+// frontend/src/pages/SupplierReturns.jsx - MODERN GLASSMORPHISM DESIGN WITH PROGRESSIVE DISCLOSURE
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, TrendingDown, RotateCcw, ChevronLeft, ChevronRight, AlertCircle, X, Sun, Moon } from 'lucide-react';
+import { Plus, Trash2, TrendingDown, RotateCcw, ChevronLeft, ChevronRight, AlertCircle, X, Eye, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../api/api';
 
-import { SkeletonStatCard, SkeletonGroupCard } from '../components/skeleton/UnifiedSkeleton'
+import { SkeletonStatCard, SkeletonGroupCard } from '../components/skeleton/UnifiedSkeleton';
 
 const formatDate = (date) => {
   const d = new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-// Theme Hook
-const useTheme = () => {
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved) return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+// Glassmorphic Card Component
+const GlassCard = ({ children, className = "", delay = 0 }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay }}
+    className={`relative backdrop-blur-xl bg-white/10 dark:bg-gray-900/30 rounded-2xl border border-white/20 dark:border-gray-700/50 shadow-2xl ${className}`}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-orange-500/5 rounded-2xl" />
+    <div className="relative">{children}</div>
+  </motion.div>
+);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+// Stat Card Component with Hover Effects
+const StatCard = ({ icon: Icon, title, value, subtitle, color, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+    animate={{ opacity: 1, scale: 1, y: 0 }}
+    transition={{ duration: 0.5, delay }}
+    whileHover={{ scale: 1.02, y: -5 }}
+    className="group"
+  >
+    <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 rounded-2xl border border-white/20 dark:border-gray-700/50 shadow-2xl overflow-hidden">
+      <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+        <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${color}`} />
+      </div>
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
+      <div className="relative p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className={`p-3 rounded-xl bg-gradient-to-br ${color} shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
+            <Icon className="w-6 h-6 text-white" />
+          </div>
+        </div>
+        
+        <p className="text-sm font-medium text-gray-400 dark:text-gray-500 mb-1">
+          {title}
+        </p>
+        
+        <motion.p 
+          className="text-3xl font-bold text-gray-900 dark:text-white mb-1"
+          initial={{ scale: 1 }}
+          whileHover={{ scale: 1.05 }}
+        >
+          {value}
+        </motion.p>
+        
+        {subtitle && (
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {subtitle}
+          </p>
+        )}
+      </div>
+    </div>
+  </motion.div>
+);
 
-  return { theme, toggleTheme };
-};
-
-export default function MonthlySupplierReturns() {
-  const { theme, toggleTheme } = useTheme();
+export default function ModernSupplierReturns() {
   const [varieties, setVarieties] = useState([]);
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showReturns, setShowReturns] = useState(false); // Progressive disclosure
   
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -251,175 +285,269 @@ export default function MonthlySupplierReturns() {
                          currentYear === new Date().getFullYear();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 md:p-6 transition-colors">
-      <div className="max-w-7xl mx-auto">
-        
-        {/* HEADER WITH THEME TOGGLE */}
-        <div className="mb-4 sm:mb-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
-            <div className="flex-1">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">Supplier Returns</h2>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Track returns to suppliers and refunds</p>
-            </div>
-            <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-red-900/20 to-orange-900/20 dark:from-gray-950 dark:via-red-950/30 dark:to-orange-950/30">
+      {/* Animated background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-48 w-96 h-96 bg-red-500/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-orange-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
 
-              <button
-                onClick={() => setShowForm(!showForm)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition shadow-lg active:scale-95"
-              >
-                <Plus size={18} />
-                <span className="text-sm sm:text-base">Record Return</span>
-              </button>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        
+        {/* HEADER */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-8"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+            <div>
+              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent mb-2">
+                Supplier Returns
+              </h1>
+              <p className="text-gray-400 dark:text-gray-500">
+                Track returns to suppliers and refunds
+              </p>
             </div>
+
+            <motion.button
+              onClick={() => setShowForm(!showForm)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative group px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 text-white font-semibold shadow-lg overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+              <div className="relative flex items-center justify-center gap-2">
+                <Plus size={20} />
+                <span>Record Return</span>
+              </div>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
 
         {/* RETURN FORM */}
-        {showForm && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-red-200 dark:border-red-900/50 p-4 sm:p-6 mb-4 sm:mb-6">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100">Record Return to Supplier</h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition lg:hidden text-gray-600 dark:text-gray-300"
-                aria-label="Close form"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-              
-              <div>
-                <label className="block mb-1 sm:mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Quantity {selectedVariety && `(${selectedVariety.measurement_unit})`} *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step={selectedVariety?.measurement_unit !== 'pieces' ? '0.01' : '1'}
-                  max={availableStock ? availableStock.quantity : undefined}
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                  placeholder={selectedVariety ? `Enter ${selectedVariety.measurement_unit}` : 'Select variety first'}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
-                />
-                {availableStock && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    Max available: {availableStock.quantity.toFixed(1)} {availableStock.unit}
-                  </p>
-                )}
-              </div>
+        <AnimatePresence>
+          {showForm && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <GlassCard className="p-6 mb-8" delay={0}>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-white">Record Return to Supplier</h3>
+                  <motion.button
+                    onClick={() => setShowForm(false)}
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="p-2 hover:bg-white/10 rounded-lg transition text-gray-400"
+                  >
+                    <X size={20} />
+                  </motion.button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-300">
+                      Supplier Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.supplier_name}
+                      onChange={(e) => handleSupplierChange(e.target.value)}
+                      placeholder="Enter supplier name"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white placeholder-gray-400 transition"
+                    />
+                  </div>
 
-              <div>
-                <label className="block mb-1 sm:mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Price per {selectedVariety ? selectedVariety.measurement_unit.slice(0, -1) : 'Unit'} (₹) *
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price_per_item}
-                  onChange={(e) => setFormData({ ...formData, price_per_item: e.target.value })}
-                  placeholder={availableStock ? "Price auto-filled" : "Price per unit"}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
-                />
-              </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-300">
+                      Cloth Variety *
+                    </label>
+                    <input
+                      type="text"
+                      value={varietySearch}
+                      onChange={(e) => {
+                        setVarietySearch(e.target.value);
+                        setShowVarietyDropdown(true);
+                      }}
+                      onFocus={() => setShowVarietyDropdown(true)}
+                      placeholder="Search variety..."
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white placeholder-gray-400 transition"
+                    />
 
-              <div>
-                <label className="block mb-1 sm:mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Return Date *</label>
-                <input
-                  type="date"
-                  value={formData.return_date}
-                  onChange={(e) => setFormData({ ...formData, return_date: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 sm:mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Reason for Return</label>
-                <input
-                  type="text"
-                  value={formData.reason}
-                  onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  placeholder="e.g., Defective, Wrong item"
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
-                />
-              </div>
-
-              {formData.quantity && formData.price_per_item && (
-                <div className="md:col-span-2 p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-red-800 dark:text-red-300">Refund Amount</p>
-                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                        {formData.quantity} × ₹{formData.price_per_item}
+                    {showVarietyDropdown && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl"
+                      >
+                        {filteredVarieties.length === 0 ? (
+                          <div className="px-4 py-2 text-gray-400 text-sm">
+                            No varieties found
+                          </div>
+                        ) : (
+                          filteredVarieties.map((v) => (
+                            <motion.div
+                              key={v.id}
+                              onClick={() => handleVarietySelect(v)}
+                              whileHover={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+                              className="px-4 py-2 cursor-pointer border-b border-white/10 last:border-0 transition"
+                            >
+                              <div className="font-medium text-white text-sm">{v.name}</div>
+                              <div className="text-xs text-gray-400 capitalize">{v.measurement_unit}</div>
+                            </motion.div>
+                          ))
+                        )}
+                      </motion.div>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-300">
+                      Quantity {selectedVariety && `(${selectedVariety.measurement_unit})`} *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      step={selectedVariety?.measurement_unit !== 'pieces' ? '0.01' : '1'}
+                      max={availableStock ? availableStock.quantity : undefined}
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                      placeholder={selectedVariety ? `Enter ${selectedVariety.measurement_unit}` : 'Select variety first'}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white placeholder-gray-400 transition"
+                    />
+                    {availableStock && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Max available: {availableStock.quantity.toFixed(1)} {availableStock.unit}
                       </p>
-                    </div>
-                    <p className="text-2xl sm:text-3xl font-bold text-red-700 dark:text-red-400">₹{total.toFixed(2)}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-300">
+                      Price per {selectedVariety ? selectedVariety.measurement_unit.slice(0, -1) : 'Unit'} (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.price_per_item}
+                      onChange={(e) => setFormData({ ...formData, price_per_item: e.target.value })}
+                      placeholder={availableStock ? "Price auto-filled" : "Price per unit"}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white placeholder-gray-400 transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-300">Return Date *</label>
+                    <input
+                      type="date"
+                      value={formData.return_date}
+                      onChange={(e) => setFormData({ ...formData, return_date: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-300">Reason for Return</label>
+                    <input
+                      type="text"
+                      value={formData.reason}
+                      onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                      placeholder="e.g., Defective, Wrong item"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white placeholder-gray-400 transition"
+                    />
+                  </div>
+
+                  {formData.quantity && formData.price_per_item && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="md:col-span-2 p-4 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-lg border border-white/20"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-medium text-gray-300">Refund Amount</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {formData.quantity} × ₹{formData.price_per_item}
+                          </p>
+                        </div>
+                        <p className="text-3xl font-bold text-white">₹{total.toFixed(2)}</p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <div className="md:col-span-2 flex gap-3">
+                    <motion.button
+                      onClick={handleSubmit}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-red-500 to-orange-500 text-white font-medium shadow-lg"
+                    >
+                      Record Return & Deduct Stock
+                    </motion.button>
+                    <motion.button
+                      onClick={() => {
+                        setShowForm(false);
+                        setSelectedVariety(null);
+                        setVarietySearch('');
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-6 py-3 rounded-lg border border-white/20 text-gray-300 hover:bg-white/10 transition"
+                    >
+                      Cancel
+                    </motion.button>
                   </div>
                 </div>
-              )}
-
-              <div className="md:col-span-2 flex flex-col sm:flex-row gap-3 pt-2">
-                <button
-                  onClick={handleSubmit}
-                  className="w-full sm:flex-1 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-red-600 text-white text-sm sm:text-base font-medium hover:bg-red-700 transition shadow-lg active:scale-95"
-                >
-                  Record Return & Deduct Stock
-                </button>
-                <button
-                  onClick={() => {
-                    setShowForm(false);
-                    setSelectedVariety(null);
-                    setVarietySearch('');
-                  }}
-                  className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm sm:text-base hover:bg-gray-100 dark:hover:bg-gray-700 transition active:scale-95"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+              </GlassCard>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* MONTH NAVIGATOR */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 mb-4 sm:mb-6">
-          <div className="flex items-center justify-between gap-2">
-            <button
+        <GlassCard className="p-4 mb-6" delay={0.1}>
+          <div className="flex items-center justify-between">
+            <motion.button
               onClick={() => changeMonth(-1)}
-              className="p-2 sm:p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition active:scale-95 text-gray-700 dark:text-gray-300"
-              aria-label="Previous month"
+              whileHover={{ scale: 1.1, x: -5 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-2 hover:bg-white/10 rounded-lg transition text-white"
             >
               <ChevronLeft size={20} />
-            </button>
+            </motion.button>
             
-            <div className="text-center flex-1">
-              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
                 {monthNames[currentMonth]} {currentYear}
               </h3>
               {!isCurrentMonth && (
-                <button
+                <motion.button
                   onClick={goToCurrentMonth}
-                  className="text-xs sm:text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 mt-1 hover:underline"
+                  whileHover={{ scale: 1.05 }}
+                  className="text-sm text-red-400 hover:text-red-300 mt-1 transition"
                 >
                   Go to Current Month
-                </button>
+                </motion.button>
               )}
             </div>
             
-            <button
+            <motion.button
               onClick={() => changeMonth(1)}
-              className="p-2 sm:p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition active:scale-95 text-gray-700 dark:text-gray-300"
-              aria-label="Next month"
+              whileHover={{ scale: 1.1, x: 5 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-2 hover:bg-white/10 rounded-lg transition text-white"
             >
               <ChevronRight size={20} />
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </GlassCard>
 
-        {/* SUMMARY CARDS - With Unified Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
+        {/* SUMMARY CARDS - Always Visible */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {initialLoading ? (
             <>
               <SkeletonStatCard />
@@ -428,197 +556,242 @@ export default function MonthlySupplierReturns() {
             </>
           ) : (
             <>
-              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-gray-700 shadow-sm">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="flex-1">
-                    <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-gray-400">Total Returns</p>
-                    <h3 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-gray-100 mt-1">
-                      {returns.length}
-                    </h3>
-                  </div>
-                  <div className="p-2 sm:p-3 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                    <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-gray-300" />
-                  </div>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400">returns this month</p>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-gray-700 shadow-sm">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="flex-1">
-                    <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-gray-400">Return Value</p>
-                    <h3 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-gray-100 mt-1">
-                      ₹{(totalAmount / 1000).toFixed(1)}K
-                    </h3>
-                  </div>
-                  <div className="p-2 sm:p-3 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                    <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-gray-300" />
-                  </div>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400">refunded to suppliers</p>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-gray-700 shadow-sm sm:col-span-2 lg:col-span-1">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="flex-1">
-                    <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-gray-400">Suppliers</p>
-                    <h3 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-gray-100 mt-1">
-                      {Object.keys(groupedBySupplier).length}
-                    </h3>
-                  </div>
-                  <div className="p-2 sm:p-3 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                    <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-gray-300" />
-                  </div>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400">with returns</p>
-              </div>
+              <StatCard
+                icon={RotateCcw}
+                title="Total Returns"
+                value={returns.length}
+                subtitle="returns this month"
+                color="from-red-500 to-orange-500"
+                delay={0}
+              />
+              <StatCard
+                icon={TrendingDown}
+                title="Return Value"
+                value={`₹${(totalAmount / 1000).toFixed(1)}K`}
+                subtitle="refunded to suppliers"
+                color="from-orange-500 to-yellow-500"
+                delay={0.1}
+              />
+              <StatCard
+                icon={AlertCircle}
+                title="Suppliers"
+                value={Object.keys(groupedBySupplier).length}
+                subtitle="with returns"
+                color="from-yellow-500 to-red-500"
+                delay={0.2}
+              />
             </>
           )}
         </div>
 
-        {/* RETURNS LIST - With Unified Skeleton */}
-        <div className="space-y-4 sm:space-y-6">
-          {loading ? (
-            <div className="space-y-4 sm:space-y-6">
-              <SkeletonGroupCard rows={3} />
-              <SkeletonGroupCard rows={3} />
-            </div>
-          ) : returns.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
-              <RotateCcw size={48} className="sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-300 dark:text-gray-600" />
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No returns for this month</h3>
-              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">Great! No items needed to be returned</p>
-            </div>
-          ) : (
-            Object.entries(groupedBySupplier).map(([supplier, items]) => {
-              const supplierTotal = items.reduce((sum, item) => sum + parseFloat(item.total_amount), 0);
-              
-              return (
-                <div key={supplier} className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  <div className="bg-red-50 dark:bg-red-900/20 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                      <div>
-                        <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">{supplier}</h3>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{items.length} returns</p>
-                      </div>
-                      <div className="text-left sm:text-right">
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Refund</p>
-                        <p className="text-xl sm:text-2xl font-bold text-red-700 dark:text-red-400">₹{supplierTotal.toFixed(2)}</p>
-                      </div>
-                    </div>
-                  </div>
+        {/* PROGRESSIVE DISCLOSURE BUTTON */}
+        {!loading && returns.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex justify-center mb-8"
+          >
+            <motion.button
+              onClick={() => setShowReturns(!showReturns)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="group relative px-8 py-4 rounded-2xl bg-gradient-to-r from-red-500/20 to-orange-500/20 backdrop-blur-xl border border-white/20 text-white font-semibold shadow-2xl overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+              <div className="relative flex items-center gap-3">
+                <Eye size={20} />
+                <span>{showReturns ? 'Hide' : 'View'} Return Records</span>
+                <motion.div
+                  animate={{ rotate: showReturns ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ChevronDown size={20} />
+                </motion.div>
+              </div>
+            </motion.button>
+          </motion.div>
+        )}
 
-                  <div className="block lg:hidden divide-y divide-gray-200 dark:divide-gray-700">
-                    {items.map((item) => (
-                      <div key={item.id} className="p-4 hover:bg-red-50/30 dark:hover:bg-red-900/10 transition">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900 dark:text-gray-100">{item.variety.name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 capitalize mt-0.5">{item.variety.measurement_unit}</div>
+        {/* RETURNS LIST - Progressive Disclosure */}
+        <AnimatePresence>
+          {showReturns && !loading && returns.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              {Object.entries(groupedBySupplier).map(([supplier, items], index) => {
+                const supplierTotal = items.reduce((sum, item) => sum + parseFloat(item.total_amount), 0);
+                
+                return (
+                  <motion.div
+                    key={supplier}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <GlassCard className="overflow-hidden">
+                      <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 px-6 py-4 border-b border-white/10">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="text-lg font-bold text-white">{supplier}</h3>
+                            <p className="text-sm text-gray-400">{items.length} returns</p>
                           </div>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition active:scale-95"
-                            aria-label="Delete return"
+                          <div className="text-right">
+                            <p className="text-sm text-gray-400">Total Refund</p>
+                            <p className="text-2xl font-bold text-red-400">₹{supplierTotal.toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mobile: Card View */}
+                      <div className="block lg:hidden divide-y divide-white/10">
+                        {items.map((item) => (
+                          <motion.div
+                            key={item.id}
+                            whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                            className="p-4 transition"
                           >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">Date:</span>
-                            <div className="font-medium text-gray-700 dark:text-gray-300">
-                              {new Date(item.return_date).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric' 
-                              })}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">Quantity:</span>
-                            <div className="font-medium text-gray-700 dark:text-gray-300">{parseFloat(item.quantity).toFixed(1)}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">Price/Unit:</span>
-                            <div className="font-medium text-gray-700 dark:text-gray-300">₹{parseFloat(item.price_per_item).toFixed(2)}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">Total:</span>
-                            <div className="font-semibold text-red-700 dark:text-red-400">₹{parseFloat(item.total_amount).toFixed(2)}</div>
-                          </div>
-                        </div>
-                        
-                        {item.reason && (
-                          <div className="mt-3">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
-                              {item.reason}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="hidden lg:block overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 text-xs">
-                        <tr>
-                          <th className="px-4 py-3 text-left">Date</th>
-                          <th className="px-4 py-3 text-left">Variety</th>
-                          <th className="px-4 py-3 text-center">Quantity</th>
-                          <th className="px-4 py-3 text-right">Price/Unit</th>
-                          <th className="px-4 py-3 text-right">Total</th>
-                          <th className="px-4 py-3 text-left">Reason</th>
-                          <th className="px-4 py-3 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm">
-                        {items.map((item, idx) => (
-                          <tr key={item.id} className={`border-t dark:border-gray-700 ${idx % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-800/50"} hover:bg-red-50/30 dark:hover:bg-red-900/10 transition`}>
-                            <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                              {new Date(item.return_date).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric' 
-                              })}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="font-medium text-gray-900 dark:text-gray-100">{item.variety.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{item.variety.measurement_unit}</div>
-                            </td>
-                            <td className="px-4 py-3 text-center font-medium text-gray-900 dark:text-gray-100">{parseFloat(item.quantity).toFixed(1)}</td>
-                            <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100">₹{parseFloat(item.price_per_item).toFixed(2)}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-red-700 dark:text-red-400">
-                              ₹{parseFloat(item.total_amount).toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3">
-                              {item.reason ? (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
-                                  {item.reason}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500 text-xs">No reason</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <button
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1">
+                                <div className="font-medium text-white">{item.variety.name}</div>
+                                <div className="text-xs text-gray-400 capitalize mt-0.5">{item.variety.measurement_unit}</div>
+                              </div>
+                              <motion.button
                                 onClick={() => handleDelete(item.id)}
-                                className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition"
-                                title="Delete"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition"
                               >
                                 <Trash2 size={18} />
-                              </button>
-                            </td>
-                          </tr>
+                              </motion.button>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <span className="text-gray-400 text-xs block mb-0.5">Date:</span>
+                                <div className="font-medium text-white">
+                                  {new Date(item.return_date).toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                  })}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 text-xs block mb-0.5">Quantity:</span>
+                                <div className="font-medium text-white">{parseFloat(item.quantity).toFixed(1)}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 text-xs block mb-0.5">Price/Unit:</span>
+                                <div className="font-medium text-white">₹{parseFloat(item.price_per_item).toFixed(2)}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 text-xs block mb-0.5">Total:</span>
+                                <div className="font-semibold text-red-400">₹{parseFloat(item.total_amount).toFixed(2)}</div>
+                              </div>
+                            </div>
+                            
+                            {item.reason && (
+                              <div className="mt-3">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                  {item.reason}
+                                </span>
+                              </div>
+                            )}
+                          </motion.div>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              );
-            })
+                      </div>
+
+                      {/* Desktop: Table View */}
+                      <div className="hidden lg:block overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-white/5 border-b border-white/10">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Date</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Variety</th>
+                              <th className="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase">Quantity</th>
+                              <th className="px-4 py-3 text-right text-xs font-bold text-gray-400 uppercase">Price/Unit</th>
+                              <th className="px-4 py-3 text-right text-xs font-bold text-gray-400 uppercase">Total</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Reason</th>
+                              <th className="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/10">
+                            {items.map((item, idx) => (
+                              <motion.tr
+                                key={item.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.03 }}
+                                whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)', scale: 1.01 }}
+                                className="transition-all"
+                              >
+                                <td className="px-4 py-3 text-gray-400">
+                                  {new Date(item.return_date).toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                  })}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="font-medium text-white">{item.variety.name}</div>
+                                  <div className="text-xs text-gray-400 capitalize">{item.variety.measurement_unit}</div>
+                                </td>
+                                <td className="px-4 py-3 text-center font-medium text-white">{parseFloat(item.quantity).toFixed(1)}</td>
+                                <td className="px-4 py-3 text-right text-white">₹{parseFloat(item.price_per_item).toFixed(2)}</td>
+                                <td className="px-4 py-3 text-right font-semibold text-red-400">
+                                  ₹{parseFloat(item.total_amount).toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {item.reason ? (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                      {item.reason}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500 text-xs">No reason</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <motion.button
+                                    onClick={() => handleDelete(item.id)}
+                                    whileHover={{ scale: 1.2 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    className="text-red-400 hover:bg-red-500/20 p-2 rounded-lg transition"
+                                  >
+                                    <Trash2 size={18} />
+                                  </motion.button>
+                                </td>
+                              </motion.tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </GlassCard>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
+
+        {/* EMPTY STATE */}
+        {!loading && returns.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <GlassCard className="text-center py-16">
+              <div className="w-20 h-20 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <RotateCcw className="text-gray-400" size={40} />
+              </div>
+              <h3 className="text-white font-semibold text-lg mb-2">No returns for this month</h3>
+              <p className="text-gray-400 text-sm">Great! No items needed to be returned</p>
+            </GlassCard>
+          </motion.div>
+        )}
       </div>
     </div>
   );
